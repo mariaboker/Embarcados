@@ -204,6 +204,7 @@ void loop() {
             setVel(newVel);   // sendo um valor valido, seta a velo para este novo valor
             LCDVel(newVel);
             Serial.println("Nova vel:", newVel);
+            exibe7seg(newVel);
           } 
 
         } else erro(2); // caso nao tenha um valor numerico como parametro
