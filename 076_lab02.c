@@ -5,8 +5,7 @@
 /*                                                                                          */
 /* Grupo: Victor Perez,148122 e Maria Kersanach, 156571                                     */
 /* Entrega em XX de Abril de 2018                                                           */
-/*                                                                                          */
-/* Link para simulacao Thinkecad: XX                                   */
+/*                                                                        
 /* Link para video: XX                                                 */
 /* Link para roteiro: XX                                               */
 /*                                                                                          */
@@ -36,6 +35,8 @@ Adafruit_PCD8544 display = Adafruit_PCD8544(8, 9, 10, 11, 12);
 
 /// #include "SoftwareSerial.h"   // para bluetooth
 /// SoftwareSerial bluetooth(2, 3);   // TX e RX usadas para modulo bluetooth
+
+#include <Wire.h>   // para I2C
 
 
 string input; // string lida na entrada serial
@@ -106,6 +107,11 @@ void LCDEstado (String mostra) {
 }
 
 
+// Usa "wire" para exibir velo no de 7 segmentos 
+void exibe7seg(int vel){
+  Wire.write(vel);
+  Wire.endTransmission();
+}
 
 /***    Sentido e Velocidade do Motor   ***/
 
@@ -133,7 +139,6 @@ void setVel (int vel) {
   analogWrite(pinPWM, (int) ((vel * 255)/100));
 
 }
-
 
 
 
@@ -166,6 +171,10 @@ void setup(){
   // Deixa parado inicialmente
   digitalWrite(pinH0, LOW);
   digitalWrite(pinH1, LOW);
+
+  //// Wire.begin();
+  //// Wire.setClock(400000); // standard value is 100000
+  //// Wire.beginTransmission(xx);
 
   init_lcd();
 
@@ -222,14 +231,12 @@ void loop() {
           Serial.print(" RPM");  
 
       } else erro(1); 
-
     }
 
     nchar++;
+
     if (nchar >= 9) erro(1); // Comando nao existe
-
   }
-
+ 
   newEnter();
-
 }
