@@ -33,7 +33,7 @@ LiquidCrystal lcd(12, 13, 4, 5, 6, 7);
 //DB5 - pino 5
 //DB4 - pino 4
 
-
+//
 String input = ""; // string lida na entrada serial
 char last; // ultimo caractere lido na entrada serial
 int nchar = 0; // numero de caracteres lidos
