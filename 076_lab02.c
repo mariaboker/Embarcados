@@ -20,12 +20,7 @@
 SoftwareSerial serial (0, 1); //pinos 0 e 1 para rx e tx
 
 /// #include "SoftwareSerial.h"   // para bluetooth
-/// SoftwareSerial bluetooth(2, 3);   // TX e RX usadas para modulo bluetooth
-
-// #include <Adafruit_GFX.h>
-
-//#include <Adafruit_PCD8544.h>
-//Adafruit_PCD8544 display = Adafruit_PCD8544(8, 9, 10, 11, 12);
+/// SoftwareSerial bluetooth(0, 1);   // TX e RX usadas para modulo bluetooth
 
 #include <Wire.h>   // para I2C
 
@@ -39,14 +34,14 @@ LiquidCrystal lcd(12, 13, 4, 5, 6, 7);
 //DB4 - pino 4
 
 
-String input; // string lida na entrada serial
+String input = ""; // string lida na entrada serial
 char last; // ultimo caractere lido na entrada serial
 int nchar = 0; // numero de caracteres lidos
 int rpm; // valor estimado para velocidade em rpm
 int pinH0 = 10;   // pinos 10 PWM
 int pinH1 = 11;   // pinos 11 PWM
-int pinIn = 9; // pino de input do sensor de luz do motor
-int pinPWM;  // enable, Usa pwm sim pcausa do setvel - arranjar porta ?????????
+int pinIn = 8; // pino de input do sensor de luz do motor
+int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel - arranjar porta ?????????
 String velo; // string that will receive the new velo
 
 
@@ -77,11 +72,14 @@ void setup(){
   digitalWrite(pinH0, LOW);
   digitalWrite(pinH1, LOW);
 
-  //// Wire.begin();
-  //// Wire.setClock(400000); // standard value is 100000
-  //// Wire.beginTransmission(xx);
+  Wire.begin();
+  Wire.setClock(400000); // standard value is 100000
+  Wire.beginTransmission(63);
 
   init_lcd();
+  Serial.println("fim setup");
+
+  input = "";
 }
 
 
@@ -100,12 +98,14 @@ void init_lcd(){
   lcd.begin(16, 2);
   lcd.clear();   //Apaga o buffer e o display
   lcd.setCursor(0, 0);  //Seta a posição do cursor
-  lcd.println("PARADO");
+  lcd.print("PARADO");
   lcd.setCursor(0,8);
-  lcd.println("DUTYCYCLE 000%");
+  lcd.print("DUTYCYCLE 000%");
   lcd.setCursor(0,16);
-  lcd.println("VEL XXX RPM");
+  lcd.print("VEL XXX RPM");
   lcd.display();
+
+  Serial.println("fim init lcd");
 
 }
 
@@ -115,6 +115,8 @@ void LCDVel (String mostra) {
   lcd.println(mostra);
   lcd.println(" aa%");
   lcd.display();
+
+  Serial.println("exibiu velo no lcd");
   
 }
 
@@ -124,13 +126,15 @@ void LCDEstado (String mostra) {
   lcd.println(mostra);
   lcd.display();
 
+  Serial.println("exibiu estado no lcd");
+
 }
 
 
 // Usa "wire" para exibir velo no de 7 segmentos 
 void exibe7seg(int vel){
   Wire.write(vel);
-  Wire.endTransmission();
+  Wire.endTransmission(63);
 }
 
 /***    Sentido e Velocidade do Motor   ***/
@@ -151,12 +155,16 @@ void setFlow (int flow) {
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, LOW);
   }
+
+  Serial.println("setou sentido do motor");
 }
 
 
 // Recebe novo valor de velo pelo serial e muda a velo do motor
 void setVel (int vel) {
   analogWrite(pinPWM, (int) ((vel * 255)/100));
+
+  Serial.println("setou velo");
 
 }
 
@@ -182,17 +190,28 @@ void loop() {
 
   /// while(bluetooth.available()) {
   while(Serial.available()){ // enquanto ainda tem novos caracteres
-    
+    Serial.println("serial available");
     /// input = input + char(bluetooth.read()); // comuta string ate o fim do comando
-    input = input + char(Serial.read()); // comuta string ate o fim do comando
+
+    char incomingByte = char(Serial.read());
+    Serial.print("recem recebido: ");
+    Serial.println(incomingByte); // Imprime o recem recebido
+    input = input + incomingByte;
+    Serial.print("string total: ");
+    Serial.println(input);
     char last = input[nchar];
+    Serial.print("ultimo da string: ");
+    Serial.println(last);
 
     if (last == '*') { // usar charcmp
-      Serial.print("TESTE - fim de linha");
+      Serial.print("achou fim de linha: ");
+      Serial.println(input);
 
-      if (input.substring(0,3) == "VEL") {
+      if (input.substring(0,2) == "VEL") {
         velo = input.substring(5, 8); // create velo as a substring of input starting from 5 and w size of 3
-       
+        Serial.println("velocidade lida: ");
+        Serial.println(velo);       
+
         for (int i = 0; i < 2; i++) {
           if (!(isDigit(velo[i]))) erro(2); // caso nao tenha um valor numerico como parametro
 
