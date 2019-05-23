@@ -41,8 +41,13 @@ int rpm; // valor estimado para velocidade em rpm
 int pinH0 = 10;   // pinos 10 PWM
 int pinH1 = 11;   // pinos 11 PWM
 int pinIn = 8; // pino de input do sensor de luz do motor
-int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel - arranjar porta ?????????
+int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel
 String velo; // string that will receive the new velo
+
+// variaveis de medicao de tempo
+int startTime = 0;
+int currentTime = 0;
+int deltaTime = 0;
 
 
 
@@ -55,6 +60,10 @@ void configuracao_Timer0(){
   TCCR0B = 0x04;
 }
 
+
+ISR(TIMER0_COMPA_vect) {
+  // I2C
+}
 
 
 /***    ***/
@@ -169,6 +178,24 @@ void setVel (int vel) {
 }
 
 
+void measureVel(){
+  if (countRotation <= 1) {
+    startTime = millis();
+  }
+  countRotation++;
+}
+
+
+void readVel() {
+  attachInterrupt(pinIn, measureVel, RISING) {
+    if (countRotation == 15) {
+      deltaTime = millis() - startTime();
+      dutyCycle = 10 / deltaTime; // 150 rot = 1 seg = 100%
+    }
+    
+  } 
+  countRotation = 0;
+}
 
 /***  ERROS   ***/
 
