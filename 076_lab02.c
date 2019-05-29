@@ -40,16 +40,14 @@ int nchar = 0; // numero de caracteres lidos
 int rpm; // valor estimado para velocidade em rpm
 int pinH0 = 10;   // pinos 10 PWM
 int pinH1 = 11;   // pinos 11 PWM
-int pinIn = 8; // pino de input do sensor de luz do motor
+int pinIn = 3; // pino de input do sensor de luz do motor
 int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel
 String velo; // string that will receive the new velo
-int aux=0; //variavel para alternar entre displays
+int aux = 0; //variavel para alternar entre displays
 
-// variaveis de medicao de tempo
-int startTime = 0;
-int currentTime = 0;
-int deltaTime = 0;
-
+int countRotation = 0;
+int timeBase = 0; // variavel para delimitar tempo na contagem de rpm
+int pulseCount = 0; // flag que indica que a contagem de rpm deve ser realizada (baseia-se no timeBase)
 
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
@@ -65,9 +63,15 @@ void configuracao_Timer0(){
 ISR(TIMER0_COMPA_vect) {
   // I2C
   aux++;        //alterna entre displays (0, 1, 2, 3)
-  if (aux>3){
-    aux=0;
+  if (aux > 3){
+    aux = 0;
   }
+  
+  // base de contagem de pulso por 6ms
+  timeBase++;
+  if (timeBase > 200){
+    timeBase = 0;
+    pulseCount = 1; // flag that enables pulse counting 
 }
 
 
@@ -192,13 +196,15 @@ void measureVel(){
 
 
 void readVel() {
-  attachInterrupt(pinIn, measureVel, RISING) {
-    if (countRotation == 15) {
-      deltaTime = millis() - startTime();
+  int deltaTime = 0;
+  int dutyCycle = 0;
+  
+  attachInterrupt(pinIn, measureVel, RISING);
+    if (pulseCount) {
+      
       dutyCycle = 10 / deltaTime; // 150 rot = 1 seg = 100%
     }
-    
-  } 
+   
   countRotation = 0;
 }
 
@@ -257,7 +263,7 @@ void loop() {
 
         }
 
-
+      //  FAZER PARAR ANTES DE MUDAR O FLOW
       } else if (input == "VENT*") { // se o comando for VENT
           setFlow(1);
           LCDEstado("VENTILADOR");
@@ -294,8 +300,12 @@ void displayMode (int a){
     int dez=0;
     int cent=0;
     int mil=0;
+
+    int b = 0;
+    int c = 0;
+    int d = 0;
     if (aux==0){        //algarismo unidade
-        uni = a%10;
+        uni = a % 10;
         switch (uni) {                                     //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
           case 0:   // mostra 0
             digitalWrite(2, LOW);
@@ -358,8 +368,9 @@ void displayMode (int a){
             digitalWrite(5, HIGH);
           break;
         }
-    }else if (aux==1){    //algarismo dezena
-        dez = uni%10;
+    }else if (aux == 1){    //algarismo dezena
+        b = a / 10;
+        dez = b % 10;
         switch (dez) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
           case 0:   // mostra 0
             digitalWrite(2, LOW);
@@ -424,8 +435,9 @@ void displayMode (int a){
         }
         
     }else if (aux==2){    //algarismo centena
-        cent = dez%10;
-        switch (cent) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
+      c = b / 10;
+      dez = c % 10;  
+      switch (cent) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
           case 0:   // mostra 0
             digitalWrite(2, LOW);
             digitalWrite(3, LOW);
@@ -488,7 +500,8 @@ void displayMode (int a){
           break;
         }
     }else if (aux==3){    //algarismo milhar
-        mil = cent%10;
+        d = c / 10;
+        mil = d % 10;  
         switch (mil) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
           case 0:   // mostra 0
             digitalWrite(2, LOW);
@@ -553,4 +566,5 @@ void displayMode (int a){
         }
     }
 }
+
 
