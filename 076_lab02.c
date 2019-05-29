@@ -43,6 +43,7 @@ int pinH1 = 11;   // pinos 11 PWM
 int pinIn = 8; // pino de input do sensor de luz do motor
 int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel
 String velo; // string that will receive the new velo
+int aux=0; //variavel para alternar entre displays
 
 // variaveis de medicao de tempo
 int startTime = 0;
@@ -63,6 +64,10 @@ void configuracao_Timer0(){
 
 ISR(TIMER0_COMPA_vect) {
   // I2C
+  aux++;        //alterna entre displays (0, 1, 2, 3)
+  if (aux>3){
+    aux=0;
+  }
 }
 
 
@@ -203,14 +208,12 @@ void readVel() {
 void erro(int codigo) { 
 
   if (codigo == 1) Serial.print("ERRO: COMANDO INEXISTENTE\n");
-  else if (codigo == 2) Serial.print("ERRO: PARÂMETRO AUSENTE\n");
-  else if (codigo == 3) Serial.print("ERRO: PARÂMETRO INCORRETO\n");
+  else if (codigo == 2) Serial.print("ERRO: PAR METRO AUSENTE\n");
+  else if (codigo == 3) Serial.print("ERRO: PAR METRO INCORRETO\n");
   else Serial.print("ERRO NAO IDENTIFICADO\n");
 
   newEnter();
 }
-
-
 
 
 void loop() {
@@ -285,3 +288,269 @@ void loop() {
  
   newEnter();
 }
+
+void displayMode (int a){
+    int uni=0;
+    int dez=0;
+    int cent=0;
+    int mil=0;
+    if (aux==0){        //algarismo unidade
+        uni = a%10;
+        switch (uni) {                                     //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
+          case 0:   // mostra 0
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 1: // mostra 1
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 2: // mostra 2
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 3: // mostra 3
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 4: // mostra 4
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 5: // mostra 5
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 6: // mostra 6
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 7: // mostra 7
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 8: // mostra 8
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+          case 9: // mostra 9
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+        }
+    }else if (aux==1){    //algarismo dezena
+        dez = uni%10;
+        switch (dez) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
+          case 0:   // mostra 0
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 1: // mostra 1
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 2: // mostra 2
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 3: // mostra 3
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 4: // mostra 4
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 5: // mostra 5
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 6: // mostra 6
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 7: // mostra 7
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 8: // mostra 8
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+          case 9: // mostra 9
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+        }
+        
+    }else if (aux==2){    //algarismo centena
+        cent = dez%10;
+        switch (cent) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
+          case 0:   // mostra 0
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 1: // mostra 1
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 2: // mostra 2
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 3: // mostra 3
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 4: // mostra 4
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 5: // mostra 5
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 6: // mostra 6
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 7: // mostra 7
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 8: // mostra 8
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+          case 9: // mostra 9
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+        }
+    }else if (aux==3){    //algarismo milhar
+        mil = cent%10;
+        switch (mil) {                                         //MODIFICAR PARA PINOS DO LAB 2!!!!!!!!!!!!!!!!!!!!!!!!!!
+          case 0:   // mostra 0
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 1: // mostra 1
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 2: // mostra 2
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 3: // mostra 3
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, LOW);
+            digitalWrite(5, LOW);
+          break;
+          case 4: // mostra 4
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 5: // mostra 5
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 6: // mostra 6
+            digitalWrite(2, LOW);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 7: // mostra 7
+            digitalWrite(2, HIGH);
+            digitalWrite(3, HIGH);
+            digitalWrite(4, HIGH);
+            digitalWrite(5, LOW);
+          break;
+          case 8: // mostra 8
+            digitalWrite(2, LOW);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+          case 9: // mostra 9
+            digitalWrite(2, HIGH);
+            digitalWrite(3, LOW);
+            digitalWrite(4, LOW);
+            digitalWrite(5, HIGH);
+          break;
+        }
+    }
+}
+
