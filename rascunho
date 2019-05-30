@@ -1,0 +1,75 @@
+#include <string.h>
+
+#include <SoftwareSerial.h>
+SoftwareSerial serial (0, 1); //pinos 0 e 1 para rx e tx
+
+int pinH0 = 10;   // pinos 10 PWM
+int pinH1 = 11;   // pinos 11 PWM
+int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel
+int vel = 0;
+String duty;
+String value;
+int atual = 0;
+
+void setup (){
+  pinMode(pinPWM, OUTPUT);
+  pinMode(pinH1, OUTPUT);
+  pinMode(pinH0, OUTPUT);
+
+  // Deixa parado inicialmente
+  digitalWrite(pinH0, LOW);
+  digitalWrite(pinH1, LOW);
+
+  Serial.begin(9600);   // taxa de transmissao serial
+}
+
+
+void flow(int sent){
+  if (sent == 1) {
+    if (atual != 1){
+      digitalWrite(pinH0, LOW);
+      digitalWrite(pinH1, LOW);
+    }
+    digitalWrite(pinH0, HIGH);
+    digitalWrite(pinH1, LOW);
+    atual = 1;
+    
+  } else if (sent == 2) {
+    if (atual != 2){
+      digitalWrite(pinH0, LOW);
+      digitalWrite(pinH1, LOW);
+    }
+    digitalWrite(pinH0, LOW);
+    digitalWrite(pinH1, HIGH);
+    atual = 2;
+  } else {
+    digitalWrite(pinH0, LOW);
+    digitalWrite(pinH1, LOW);
+  }
+  
+}
+void loop(){
+  if (Serial.available()){
+    duty = Serial.read();
+    Serial.print("string lida:");
+    Serial.println(duty);
+    
+    value = duty.substring(5,8);
+    Serial.print("valores numericos:");
+    Serial.println(value);
+
+    int v = value.toInt();
+    Serial.print("valor int:");
+    Serial.println(v);
+
+    vel = 255 * v / 100;
+    analogWrite(pinPWM, vel);
+    flow(1);    
+    Serial.print("new vel:");
+    Serial.println(vel);
+  }
+
+
+  
+
+}
