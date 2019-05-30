@@ -16,11 +16,10 @@
 
 #include <string.h>
 
-#include <SoftwareSerial.h>
-SoftwareSerial serial (0, 1); //pinos 0 e 1 para rx e tx
+>>>>>>>>>>> SoftwareSerial serial (0, 1); //pinos 0 e 1 para rx e tx
 
 /// #include "SoftwareSerial.h"   // para bluetooth
-/// SoftwareSerial bluetooth(0, 1);   // TX e RX usadas para modulo bluetooth
+/// >>>>>> SoftwareSerial bluetooth(0, 1);   // TX e RX usadas para modulo bluetooth
 
 #include <Wire.h>   // para I2C
 
@@ -216,6 +215,10 @@ void readVel() {
     }
    
   countRotation = 0;
+
+  // DECOMPOR A ESTIMATIVA PARA EXIBIR NO DISPLAY
+  // Salvar num vetor os digitos
+
 }
 
 /***  ERROS   ***/
