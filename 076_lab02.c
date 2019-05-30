@@ -44,6 +44,7 @@ int pinIn = 3; // pino de input do sensor de luz do motor
 int pinPWM = 9;  // enable, Usa pwm sim pcausa do setvel
 String velo; // string that will receive the new velo
 int aux = 0; //variavel para alternar entre displays
+int atual = 0; // indica sentido atual de rotacao do motor
 
 int countRotation = 0;
 int timeBase = 0; // variavel para delimitar tempo na contagem de rpm
@@ -72,6 +73,7 @@ ISR(TIMER0_COMPA_vect) {
   if (timeBase > 200){
     timeBase = 0;
     pulseCount = 1; // flag that enables pulse counting 
+  }
 }
 
 
@@ -162,16 +164,27 @@ void exibe7seg(int vel){
 void setFlow (int flow) {
 
   if (flow == 1) { // seta vent mode
+    if (atual != 1){
+      digitalWrite(pinH0, LOW);   
+      digitalWrite(pinH1, LOW);
+    }
     digitalWrite(pinH0, HIGH);   // manda sinal pwm para pino que faz sentido vent
     digitalWrite(pinH1, LOW);
+    atual = 1;
 
   } else if (flow == 2) { // seta exaust mode
+      if (atual != 2){
+        digitalWrite(pinH0, LOW);   
+        digitalWrite(pinH1, LOW);
+      }
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, HIGH); // manda sinal pwm para pino que faz sentido vent
+      atual = 2;
 
   } else if (!flow) { // pára motor
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, LOW);
+      atual = 0;
   }
 
   Serial.println("setou sentido do motor");
@@ -188,9 +201,6 @@ void setVel (int vel) {
 
 
 void measureVel(){
-  if (countRotation <= 1) {
-    startTime = millis();
-  }
   countRotation++;
 }
 
@@ -202,7 +212,7 @@ void readVel() {
   attachInterrupt(pinIn, measureVel, RISING);
     if (pulseCount) {
       
-      dutyCycle = 10 / deltaTime; // 150 rot = 1 seg = 100%
+      dutyCycle = countRotation * 10 / 3; // 150 rot = 1 seg = 100%
     }
    
   countRotation = 0;
