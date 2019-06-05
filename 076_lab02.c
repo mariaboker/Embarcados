@@ -59,6 +59,10 @@ int y = 0;
 int z = 0;
 int w = 0;
 
+char c;
+int parado = 1;
+int setvel = 0;
+
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
 void configuracao_Timer0(){
@@ -72,13 +76,14 @@ ISR(TIMER0_COMPA_vect) {
   // I2C
   aux++;      // alterna entre displays (0, 1, 2, 3)
   if (aux > 3){
-  aux = 0;
+    aux = 0;
   }
   // interrupcao chamada a cada 2ms
   timeBase++;
+
   if (timeBase > 1000){ // base de tempo de 2s
-  timeBase = 0;
-  pulseCount = 1; // flag that enables pulse counting
+    timeBase = 0;
+    pulseCount = 1; // flag that enables pulse counting
   }
 }
 
@@ -95,43 +100,58 @@ void readVel() {
     rpm = countRotation * 15;   // relacao linear de 400 ms = 60 pulsos, entao para 2s = 300 pulsos
     countRotation = 0;
     pulseCount = 0;
+
+    if (rpm==0){
+      parado=1;
+    }
   }
 }
 
-
+void measureVel(){
+  countRotation++;
+}
 
 /***  Sentido e Velocidade do Motor   ***/
 // Configura sentido de movimento do motor (via ponte H) alternando entre
 // os pinos da ponte H - pinH0 e pinH1
 void setFlow (int flow) {
+  //readVel();
+  if (flow == 1) {                  // seta vent mode
+    if (atual == 0 || atual == 1){
+      digitalWrite(pinH0, HIGH);   
+      digitalWrite(pinH1, LOW);   // manda sinal pwm para pino que faz sentido vent
+      atual = 1;
+      parado = 0;
 
-  if (flow == 1) { // seta vent mode
-    if (atual != 1){
+    } else if (atual == 2){
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, LOW);
-    }
-    digitalWrite(pinH0, HIGH);   // manda sinal pwm para pino que faz sentido vent
-    digitalWrite(pinH1, LOW);
-    atual = 1;
 
-  } else if (flow == 2) { // seta exaust mode
-      if (atual != 2){
-        digitalWrite(pinH0, LOW);   
-        digitalWrite(pinH1, LOW);
+      if (parado == 1){
+        atual = 0;                  //atualiza apenas quando o motor parar
       }
+    }
+  } else if (flow == 2) {           // seta exaust mode
+    if (atual == 0 || atual == 2){
       digitalWrite(pinH0, LOW);   
-      digitalWrite(pinH1, HIGH); // manda sinal pwm para pino que faz sentido vent
+      digitalWrite(pinH1, HIGH);  // manda sinal pwm para pino que faz sentido vent
       atual = 2;
-
-  } else if (!flow) { // pára motor
+      parado = 0;
+    } else if (atual == 1){
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, LOW);
-      atual = 0;
+      if (parado == 1){
+        atual = 0;                  //atualiza apenas quando o motor parar
+      }
+    }
+  } else if (flow == 0) {           // pára motor
+    digitalWrite(pinH0, LOW);   
+    digitalWrite(pinH1, LOW);
+    if (parado == 1){
+      atual = 0;                  //atualiza apenas quando o motor parar
+    }
   }
-
-  Serial.println("setou sentido do motor");
 }
-
 
 
 /***  LCD   ***/
@@ -197,11 +217,11 @@ void LCDEstado (String mostra) {
 // trata entradas via serial
 void serialEvent() {
   while (Serial.available()) { // Enquanto houverem bytes disponíveis;
-    char c = Serial.read(); // Lê byte do buffer serial;
-    if(c =='*') {
+    c = Serial.read(); // Lê byte do buffer serial;
+    switch(c) {
       //case '\r':            // Marca o fim de um comando.
       //case '\n':
-      //case '*':
+      case '*':
         fim = 1;
         if (i == 0) return;
         buffer[i] = 0;
@@ -225,17 +245,17 @@ void serialEvent() {
               fim = 0;
 
             } else if (buffer[0] == 'V' && buffer[1] == 'E' && buffer [2] == 'N' && buffer [3] == 'T'){ // comando VENT
-              setFlow(1);
+              setvel = 1;
               LCDEstado("VENTILADOR");
               Serial.println("OK VENT");
 
             } else if (buffer[0] == 'E' && buffer[1] == 'X' && buffer [2] == 'A' && buffer [3] == 'U' && buffer [4] == 'S' && buffer [5] == 'T'){ // comando EXAUST
-              setFlow(2);
+              setvel = 2;
               LCDEstado("EXAUSTOR  ");
               Serial.println("OK EXAUST");    
 
             } else if (buffer[0] == 'P' && buffer[1] == 'A' && buffer [2] == 'R' && buffer [3] == 'A'){ // comando PARA
-              setFlow(0);
+              setvel = 0;
               LCDEstado("PARADO   ");
               Serial.println("OK PARA");  
 
@@ -244,31 +264,22 @@ void serialEvent() {
               Serial.print(rpm); // valor medido no pwm
               Serial.println(" RPM");   
 
-            } else erro(1); // erro de comando nao identificado
-           
+            } else Serial.print("ERRO: COMANDO INEXISTENTE\n"); // erro de comando nao identificado 
+
         } 
-        }else {
-          erro(3);
-        }
-      //break;
+      break;
 
     // Adiciona caracter ao buffer se não estiver cheio.
       
+      default:
         if (i < 9) {
           buffer[i] = c;
           if (i > 3) {
-            if (buffer[i] = " ") erro(2); // parametro ausente
-            if (buffer[i] < 48 || buffer[i] > 57) erro(3);  // parametro invalido
+            //if (buffer[i] == " ") Serial.print("ERRO: PARAMETRO AUSENTE\n"); // parametro ausente
+            //if (buffer[i] < 48 || buffer[i] > 57) Serial.print("ERRO: PARAMETRO INCORRETO\n"); // parametro invalido
             vel[i - 4] = buffer[i] - 48;  // pega os digitos referentes ao valor de velocidade
           }
           ++i;
-      }
-
-      if (erroCod){
-        if (erroCod == 1) Serial.print("ERRO: COMANDO INEXISTENTE\n");
-        if (erroCod == 2) Serial.print("ERRO: PARAMETRO AUSENTE\n");
-        if (erroCod == 3) Serial.print("ERRO: PARAMETRO INCORRETO\n");
-
       }
 
 
@@ -280,6 +291,7 @@ void serialEvent() {
   //buffer[2] = " ";
   //buffer[3] = " ";
   //buffer[4] = " ";
+}
 }
 
 
@@ -304,10 +316,6 @@ void displayMode (int a,int b,int c,int d){
       Wire.write(d + 112);
       Wire.endTransmission(63);
   }
-}
-
-void measureVel(){
-  countRotation++;
 }
 
 
@@ -360,9 +368,21 @@ void loop() {
   readVel();
   x = (int)rpm;
 
+  if (setvel==1){
+    setFlow (1);
+  }else if (setvel == 2){
+    setFlow (2);
+  }else if(setvel == 0){
+    setFlow (0);
+  }
+
   // Exibe valores no LCD
   LCDDuty(dutyCycle);
   LCDRPM(rpm);
+
+//  if (c!='*'&& i!=0){
+//    Serial.print(buffer[i-1]);
+//  }
 
   // distribui os digitos para display
   uni = x % 10;
@@ -375,4 +395,3 @@ void loop() {
   displayMode(uni, dez, cent, mil);
  
 }
-
