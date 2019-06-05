@@ -1,18 +1,18 @@
 /*RASCUNHO*******************************************************************************************/
 /*                                                                                        */
 /* EA 076 - Laboratório de Sistemas Embarcados                                            */
-/* Projeto 2: sadsadasd Modificar tudo                                                            */
+/* Projeto 2:  CONTROLADOR DE VENTILADOR DE TETO                                          */
 /*                                                                                        */
 /* Grupo: Victor Perez,148122 e Maria Kersanach, 156571                                   */
-/* Entrega em XX de Abril de 2018                                                         */
+/* Entrega em 05 de Junho de 2019                                                         */
 /*                                                                     
 /* Link para video: XX                                              */
 /* Link para roteiro: XX                                            */
 /*                                                                                        */
 /********************************************************************************************/
 
-/* Projeto 2: XXX           */
-/* EXPLICACAO BASICA XXX    */
+/* Projeto 2: CONTROLADOR DE VENTILADOR DE TETO   */
+
 
 #include <string.h>
 #include <Wire.h>   // para I2C
@@ -25,7 +25,7 @@ LiquidCrystal lcd(12, 13, 4, 5, 6, 7);
 //DB5 - pino 5
 //DB4 - pino 4
 
-//
+
 char last; // ultimo caractere lido na entrada serial
 float rpm; // valor estimado para velocidade em rpm
 int pinH0 = 10;   // pinos 10 PWM
@@ -40,12 +40,13 @@ int countRotation = 0;  //variável para contar numero de pulsos do encoder
 int timeBase = 0; // variavel para delimitar tempo na contagem de rpm
 int pulseCount = 0; // flag que indica que a contagem de rpm deve ser realizada (baseia-se no timeBase)
 
-char buffer[9];
-int vel[3];
+char buffer[9];   // input serial
+int vel[3];       // valor de velocidade lida no input
 int k = 0;
 int i = 0;
 int j = 2;
-int fim=0;
+int fim = 0;
+int erroCod = 0;
 
 int dutyCycle = 0;
 
@@ -103,49 +104,34 @@ void readVel() {
 // Configura sentido de movimento do motor (via ponte H) alternando entre
 // os pinos da ponte H - pinH0 e pinH1
 void setFlow (int flow) {
- 
-  int set = 0;
 
-  while (set != 1){
-    readVel();
-
-    if (flow == 1) {                  // seta vent mode
-      if (atual == 0 || atual == 1){
-        digitalWrite(pinH0, HIGH);   
-        digitalWrite(pinH1, LOW);   // manda sinal pwm para pino que faz sentido vent
-        atual = 1;
-        set = 1;
-      } else if (atual == 2){
-        digitalWrite(pinH0, LOW);   
-        digitalWrite(pinH1, LOW);
-        if (rpm == 0){
-          atual = 0;                  //atualiza apenas quando o motor parar
-        }
-      }
-    } else if (flow == 2) {           // seta exaust mode
-      if (atual == 0 || atual == 2){
-        digitalWrite(pinH0, LOW);   
-        digitalWrite(pinH1, HIGH);  // manda sinal pwm para pino que faz sentido vent
-        atual = 2;
-        set=1;
-      } else if (atual == 1){
-        digitalWrite(pinH0, LOW);   
-        digitalWrite(pinH1, LOW);
-        if (rpm == 0){
-          atual = 0;                  //atualiza apenas quando o motor parar
-        }
-      }
-    } else if (flow == 0) {           // pára motor
+  if (flow == 1) { // seta vent mode
+    if (atual != 1){
       digitalWrite(pinH0, LOW);   
       digitalWrite(pinH1, LOW);
-      if (rpm == 0){
-        atual = 0;                  //atualiza apenas quando o motor parar
-        set=1;
-      }
     }
+    digitalWrite(pinH0, HIGH);   // manda sinal pwm para pino que faz sentido vent
+    digitalWrite(pinH1, LOW);
+    atual = 1;
+
+  } else if (flow == 2) { // seta exaust mode
+      if (atual != 2){
+        digitalWrite(pinH0, LOW);   
+        digitalWrite(pinH1, LOW);
+      }
+      digitalWrite(pinH0, LOW);   
+      digitalWrite(pinH1, HIGH); // manda sinal pwm para pino que faz sentido vent
+      atual = 2;
+
+  } else if (!flow) { // pára motor
+      digitalWrite(pinH0, LOW);   
+      digitalWrite(pinH1, LOW);
+      atual = 0;
   }
 
+  Serial.println("setou sentido do motor");
 }
+
 
 
 /***  LCD   ***/
@@ -212,10 +198,10 @@ void LCDEstado (String mostra) {
 void serialEvent() {
   while (Serial.available()) { // Enquanto houverem bytes disponíveis;
     char c = Serial.read(); // Lê byte do buffer serial;
-    switch(c) {
-      case '\r':            // Marca o fim de um comando.
-      case '\n':
-      case '*':
+    if(c =='*') {
+      //case '\r':            // Marca o fim de um comando.
+      //case '\n':
+      //case '*':
         fim = 1;
         if (i == 0) return;
         buffer[i] = 0;
@@ -228,7 +214,7 @@ void serialEvent() {
               Testvel = 0;
 
               while (k < 3){
-                Testvel = Testvel + pow(10,k) * vel[j];
+                Testvel = Testvel + pow(10, k) * vel[j];
                 j--;
                 k++;
               }
@@ -260,20 +246,34 @@ void serialEvent() {
 
             } else erro(1); // erro de comando nao identificado
            
+        } 
+        }else {
+          erro(3);
         }
-      break;
+      //break;
 
     // Adiciona caracter ao buffer se não estiver cheio.
-      default:
+      
         if (i < 9) {
           buffer[i] = c;
           if (i > 3) {
+            if (buffer[i] = " ") erro(2); // parametro ausente
+            if (buffer[i] < 48 || buffer[i] > 57) erro(3);  // parametro invalido
             vel[i - 4] = buffer[i] - 48;  // pega os digitos referentes ao valor de velocidade
           }
           ++i;
       }
+
+      if (erroCod){
+        if (erroCod == 1) Serial.print("ERRO: COMANDO INEXISTENTE\n");
+        if (erroCod == 2) Serial.print("ERRO: PARAMETRO AUSENTE\n");
+        if (erroCod == 3) Serial.print("ERRO: PARAMETRO INCORRETO\n");
+
+      }
+
+
     }
-  }
+  
 
   //buffer[0] = " ";
   //buffer[1] = " ";
@@ -314,10 +314,9 @@ void measureVel(){
 /***  ERROS   ***/
 // Indicacao de erros de acordo com seu tipo e preparacao para nova entrada
 void erro(int codigo) {
-  if (codigo == 1) Serial.print("ERRO: COMANDO INEXISTENTE\n");
-  else if (codigo == 2) Serial.print("ERRO: PARAMETRO AUSENTE\n");
-  else if (codigo == 3) Serial.print("ERRO: PARAMETRO INCORRETO\n");
-  else Serial.print("ERRO NAO IDENTIFICADO\n");
+  if (codigo == 1) erroCod = 1;
+  else if (codigo == 2) erroCod = 2;
+  else if (codigo == 3) erroCod = 3;
 }
 
 
