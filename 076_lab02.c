@@ -1,15 +1,15 @@
-/*RASCUNHO*******************************************************************************************/
+/******************************************************************************************/
 /*                                                                                        */
 /* EA 076 - Laboratório de Sistemas Embarcados                                            */
 /* Projeto 2:  CONTROLADOR DE VENTILADOR DE TETO                                          */
 /*                                                                                        */
 /* Grupo: Victor Perez,148122 e Maria Kersanach, 156571                                   */
 /* Entrega em 05 de Junho de 2019                                                         */
-/*                                                                     
-/* Link para video: XX                                              */
-/* Link para roteiro: XX                                            */
 /*                                                                                        */
-/********************************************************************************************/
+/* Link para video: encurtador.com.br/MP248                                               */
+/* Link para roteiro: encurtador.com.br/MP248                                             */
+/*                                                                                        */
+/******************************************************************************************/
 
 /* Projeto 2: CONTROLADOR DE VENTILADOR DE TETO   */
 
