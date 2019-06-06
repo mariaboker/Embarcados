@@ -264,9 +264,11 @@ void serialEvent() {
               Serial.print(rpm); // valor medido no pwm
               Serial.println(" RPM");   
 
-            } else Serial.print("ERRO: COMANDO INEXISTENTE\n"); // erro de comando nao identificado 
+            } else Serial.print("ERRO: COMANDO INEXISTENTE\n"); // erro de comando nao identificado com *
 
-        } 
+        }
+        
+
       break;
 
     // Adiciona caracter ao buffer se não estiver cheio.
@@ -275,23 +277,29 @@ void serialEvent() {
         if (i < 9) {
           buffer[i] = c;
           if (i > 3) {
-            //if (buffer[i] == " ") Serial.print("ERRO: PARAMETRO AUSENTE\n"); // parametro ausente
-            //if (buffer[i] < 48 || buffer[i] > 57) Serial.print("ERRO: PARAMETRO INCORRETO\n"); // parametro invalido
             vel[i - 4] = buffer[i] - 48;  // pega os digitos referentes ao valor de velocidade
+            //if (*vel > 1 && *(vel+1) > 0) Serial.print("ERRO: PARAMETRO INVALIDO\n");
+            //Serial.println(*vel);
+            //Serial.println(*(vel+1));
           }
+
+          if (buffer[i] == '\n' && buffer[i - 1] != '*') {
+            //if (buffer[0] != 'V' || buffer[1] != 'E' || buffer [2] != 'N' || buffer [3] != 'T') Serial.print("ERRO: COMANDO INEXISTENTE\n"); // erro de comando nao identificado sem *
+            //if ((buffer != "VENT*") && (buffer != "EXAUST") && (buffer != "")) Serial.print("ERRO: COMANDO INEXISTENTE\n"); // erro de comando nao identificado sem *
+
+          }
+
+
           ++i;
-      }
-
-
+        }
     }
-  
 
   //buffer[0] = " ";
   //buffer[1] = " ";
   //buffer[2] = " ";
   //buffer[3] = " ";
   //buffer[4] = " ";
-}
+  }
 }
 
 
