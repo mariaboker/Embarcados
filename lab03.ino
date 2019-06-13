@@ -41,7 +41,7 @@ void loop() {
   Wire.write(0); // adress
   Wire.write(114); // data
   Wire.endTransmission(80);
-delay(5);
+  delay(5);
   Wire.beginTransmission(80); // endereco de memoria
   Wire.write(0);
   Wire.endTransmission(80);
