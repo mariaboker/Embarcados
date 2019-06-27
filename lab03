@@ -90,37 +90,41 @@ void configuracao_Timer0() {
 // interrupcao chamada a cada 2ms
 ISR(TIMER0_COMPA_vect) {
 
-  aux++; // alterna entre displays (0, 1, 2, 3)
+  // alterna entre displays (0, 1, 2, 3)
+  aux++; 
   if (aux > 3) {
     aux = 0;
   }
-  if (inicia == 1) {    //conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
+
+  //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
+  if (inicia == 1) {        
     timeBase++;
-    if (timeBase > 1000) { // base de tempo de 2s
+    if (timeBase > 1000) {  // base de tempo de 2s
     timeBase = 0;
-    salvaTemp = 1; // flag that enables pulse counting
+    salvaTemp = 1;          // flag para salvar temperatura na memoria
    }  
   } 
-  if (apertou == 1) count++;
+
+  //flag para contar debouncing
+  if (apertou == 1) count++;  
 }
 
-
-
-void displayMode (int a,int b,int c,int d){
-  
-  if (aux==0) {    //algarismo unidade
+//*** MOSTRA NO 7 SEGMENTOS ***//
+// Funcao que mostra no display 7 segmentos através do I2C
+void displayMode (int a,int b,int c,int d){  
+  if (aux==0) {                 //algarismo unidade
     Wire.beginTransmission(63);
     Wire.write(a+224);
     Wire.endTransmission(63);
-  } else if (aux == 1) {  //algarismo dezena
+  } else if (aux == 1) {        //algarismo dezena
     Wire.beginTransmission(63);
     Wire.write(b+208);
     Wire.endTransmission(63);
-  } else if (aux == 2) {  //algarismo centena
+  } else if (aux == 2) {        //algarismo centena
     Wire.beginTransmission(63);
     Wire.write(c+176);
     Wire.endTransmission(63);
-  } else if (aux == 3) {  //algarismo milhar
+  } else if (aux == 3) {        //algarismo milhar
     Wire.beginTransmission(63);
     Wire.write(d+112);
     Wire.endTransmission(63);
@@ -130,28 +134,30 @@ void displayMode (int a,int b,int c,int d){
 /***  LCD   ***/
 // Funcao que configura estado inicial do display LCD
 void init_lcd() {
+
   lcd.begin(16, 2);
-  lcd.clear();   //Apaga o buffer e o display
-  lcd.setCursor(0,0);  //Seta a posição do cursor
+  lcd.clear();          //Apaga o buffer e o display
+  lcd.setCursor(0,0);   //Seta a posição do cursor
   lcd.display();
   Serial.println("fim init lcd");
 }
 
-
+//*** ESCANEAR TECLADO ***//
+//Funcao que capta que tecla foi pressionada no teclado matricial
 void scanKeypad() {
-  if (aux2 == 0) {
-    for (int i = 0; i < 4; i++){
-      digitalWrite(linhas[i], LOW);
 
+  // capta qualquer ruído e mapeia onde foi
+  if (aux2 == 0) {
+    for (int i = 0; i < 4; i++){      // Fase de scan
+      digitalWrite(linhas[i], LOW);   // Seta uma das linhas LOW para captar nas colunas
       if(digitalRead(colun1)==0) {
         //colunalido = colun1;
-        mapcolun = 1;
-        mapline = i+1;
-        aux2 = 1;
-        apertou = 1;
+        mapcolun = 1;                 // Se pegou algo mapeia coluna
+        mapline = i+1;                // e linha
+        aux2 = 1;                     // sai da fase de captar
+        apertou = 1;                  // Seta flag para debounce
         break;
       }
-
       if(digitalRead(colun2)==0){
         //colunalido = colun2;
         mapcolun = 2;
@@ -160,7 +166,6 @@ void scanKeypad() {
         apertou = 1;
         break;
       }
-
       if(digitalRead(colun3)==0){
         //colunalido = colun3;
         mapcolun = 3;
@@ -169,37 +174,42 @@ void scanKeypad() {
         apertou = 1;
         break;
       }
-
-      digitalWrite(linhas[i], HIGH);
+      digitalWrite(linhas[i], HIGH);  //volta linha para HIGH para proximo scan
     }
   }
+
+  // espera contagem de 50ms de debouncing e verifica de novo se tecla continua pressionada
   if (pressed==1||(count >= 25)&&((digitalRead(colun1)==0)||(digitalRead(colun2)==0)||(digitalRead(colun3)==0))){
     count = 0;
     pressed = 1;
     apertou = 0;
+    Serial.println("pressionou algo");
 
+    //seta todas as linhas LOW para captar soltura de tecla e lê de novo
     digitalWrite(linhas[0], LOW);
     digitalWrite(linhas[1], LOW);
     digitalWrite(linhas[2], LOW);
     digitalWrite(linhas[3], LOW);
-
     colunalido1 = digitalRead(colun1);
     colunalido2 = digitalRead(colun2);
     colunalido3 = digitalRead(colun3);
-    Serial.println("pressionou algo");
+    //Serial.println("pressionou algo");
 
+    //Se soltou tecla passa para a próxima fase que verifica qual tecla foi
     if(colunalido1==1&&colunalido2==1&&colunalido3==1){
+
+    //reseta estado padrão de scan das linhas
+    //Serial.println("soltou algo");
     digitalWrite(linhas[0], HIGH);
     digitalWrite(linhas[1], HIGH);
     digitalWrite(linhas[2], HIGH);
     digitalWrite(linhas[3], HIGH);
-    Serial.println("soltou algo");
-
     apertou = 0;
     aux2=0;
     pressed=0;
     colunalido==0;
 
+    //Verifica qual tecla foi apertada
     if (mapline == 1) {
       if (mapcolun == 1) tecla = '1';
       else if (mapcolun == 2) tecla = '2';
@@ -221,16 +231,19 @@ void scanKeypad() {
       else if (mapcolun == 3) tecla = '*';
     } 
      Serial.println(tecla); 
+
   }
  }
 }
 
+//*** QUANTIDADE DE DADOS PARA SEREM TRANSFERIDOS PARA A MEMORIA ***//
+// Funcao que pega pelo teclado matricial valor numerico de quantidade de dados a serem transferidas na funcao 5
 void coletaNumero(){    //coleta numero de teclado para função transferee
   valor = 0;
   k=0;
   j=0;
   tecla=0;
-  do { // enquanto nao eh o asterisco, le teclado
+  do {        // enquanto nao eh o asterisco, le teclado
   scanKeypad();
     if(tecla != 0){
       lido[j]=tecla-48;
@@ -244,47 +257,51 @@ void coletaNumero(){    //coleta numero de teclado para função transferee
     }
   } while(tecla!='#');
 
-  if (lido[1]==-13){    //numero de 1 digito
+  if (lido[1]==-13){              //numero de 1 digito
   valor = lido[0];
-  } else if (lido[2]==-13) {  //numero de 2 digitos
+  } else if (lido[2]==-13) {      //numero de 2 digitos
       for(j=1;j>=0;j--){
       valor = valor + lido[j]*pow(10,k);
       k++;
       }
-  } else if (lido[3]==-13){  //numero de 3
+  } else if (lido[3]==-13){       //numero de 3 digitos
       for(j=2;j>=0;j--){
       valor = valor + lido[j]*pow(10,k);
       k++;
     }
-  } else if (lido[4]==-13){
-    for(j=3;j>=0;j--){
-    valor = valor + lido[j]*pow(10,k);
-    k++;
+  } else if (lido[4]==-13){       //numero de 4 digitos
+      for(j=3;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
     }
   }
-  lcd.setCursor(0,1);  //Seta a posição do cursor
+  lcd.setCursor(0,1);         //Seta a posição do cursor
   Serial.print("cabou ja"); 
 }
 
+//*** INTERRUPCAO EXTERNA ***//
 void serialEvent(){
-
 }
 
+//*** SENSOR DE TEMPERATURA ***//
+// Funcao que pega temperatura do sensor pela entrada analogica
 double getTmedido() {               //get temp sensor
   float temp;
   float ldr;
   ldr = analogRead(0);
-  //temp = ldr*(1.1/1023*100);      //medindo errado
-  temp=((((ldr/1024)*1.1)-0.5)*100);  //medindo certo
+  //temp = ldr*(1.1/1023*100);        //medindo errado tinker e certo arduino
+  temp=((((ldr/1024)*1.1)-0.5)*100);  //medindo certo tinker e errado arduino
   lcd.setCursor(11,2);
   lcd.print(temp);
 
-  return temp;
+  return temp;                        //retorna valor de temperatura para ser usada depois
 }
 
+//*** EXECUCAO DE COMANDOS LIDOS NO TECLADO ***//
+// Funcao que efetivamente executa os comandos depois de serem lidos no teclado
 void executeCommand() {
   if (reset == 1) {
-    //apaga a memoria;
+    // AQUI DEVE APAGAR A MEMORIA;
     countMed = 0;
     reset = 0;
     inicia = 0;
@@ -302,7 +319,7 @@ void executeCommand() {
       finaliza == 0;    
     }
     if (statuss == 1) {        //mostra statuss da memoria
-      lcd.clear();        //sobreescreve tudo oq que estava antes no lcd
+      lcd.clear();            //sobreescreve tudo oq que estava antes no lcd
       lcd.setCursor(0,0);
       lcd.print(countMed);
       lcd.setCursor(0,1);
@@ -314,7 +331,8 @@ void executeCommand() {
     }
 }
 
-
+//*** ESCANEAMENTO DE COMANDO ***//
+// Funcao que seta e confirma ou cancela comandos lidos no teclado
 void scanCommand() {
   scanKeypad();
   anterior = tecla;
