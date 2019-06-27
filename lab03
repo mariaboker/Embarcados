@@ -344,22 +344,24 @@ void executeCommand() {
 //*** ESCANEAMENTO DE COMANDO ***//
 // Funcao que seta e confirma ou cancela comandos lidos no teclado
 void scanCommand() {
-  scanKeypad();
-  anterior = tecla;
+  scanKeypad();         // verifica qual tecla
+  anterior = tecla;     // guarda valor anterior de tecla
 
+  //** COMANDO RESET
   if (anterior == '1' || guardanum == '1'){
-    statuss=0;
+    statuss=0;          // desativa status para sobreescrever
     guardanum = '1';
     lcd.setCursor(0,0);
     lcd.print("reset?          ");
     lcd.setCursor(0,1);
     lcd.print("#-si *-no");
     scanKeypad();
-    atual = tecla;
+    atual = tecla;    // escaneia tecla atual para verificar se eh # ou *
 
-    if (atual == '#'){  //confirma comando reset (executar função aqui ou fora?)
+    if (atual == '#'){  //confirma comando reset
       lcd.clear();
       lcd.print("resetando"); //teste - transformar em coment
+      reset = 1;              // flag para comando reset
       anterior = 0;
       atual = 0;
       tecla = 0;
@@ -374,19 +376,21 @@ void scanCommand() {
       //break;
     }
 
+  //** COMANDO MOSTRA STATUS
   } else if (anterior == '2'|| guardanum == '2'){
-    statuss=0;
+    statuss=0;              // desativa status para sobreescrever
     guardanum = '2';
     lcd.setCursor(0,0);
     lcd.print("ver statuss?     ");
     lcd.setCursor(0,1);
     lcd.print("#-si *-no");
     scanKeypad();
-    atual = tecla;
+    atual = tecla;          // escaneia tecla atual para verificar se eh # ou *
 
-    if (atual == '#'){  //confirma comando statuss (executar função aqui ou fora?)
+    if (atual == '#'){  //confirma comando statuss
       lcd.clear();
       lcd.print("mostrei"); //teste - transformar em coment
+      statuss=1;            // flag para mostrar estado
       anterior = 0;
       atual = 0;
       tecla = 0;
@@ -401,26 +405,27 @@ void scanCommand() {
       //break;
     }
 
+  //** COMANDO INICIA COLETA
   } else if (anterior == '3'|| guardanum == '3') {
-    statuss=0;
+    statuss=0;              // desativa status para sobreescrever
     guardanum = '3';
     lcd.setCursor(0,0);
     lcd.print("inicia coleta?  ");
     lcd.setCursor(0,1);
     lcd.print("#-si *-no");
     scanKeypad();
-    atual = tecla;
+    atual = tecla;            // escaneia tecla atual para verificar se eh # ou *
 
-    if (atual == '#'){              //confirma comando inicia (executar função aqui ou fora?)
+    if (atual == '#'){              //confirma comando inicia
       lcd.clear();
       lcd.print("iniciou");         //teste - transformar em coment
-      inicia = 1;             //flag para coleta
+      inicia = 1;                   //flag para iniciar coleta
       anterior = 0;
       atual = 0;
       tecla = 0;
       guardanum=0;
 
-    } else if (atual == '*') {          //cancela
+    } else if (atual == '*') {      //cancela
       lcd.clear();
       anterior = 0;
       atual = 0;
@@ -429,20 +434,21 @@ void scanCommand() {
       //break;
     }
 
+  //** COMANDO FINALIZA COLETA
   } else if (anterior == '4'|| guardanum == '4'){
-    statuss=0;
+    statuss=0;                      // desativa status para sobreescrever
     guardanum = '4';
     lcd.setCursor(0,0);
     lcd.print("finaliza coleta?");
     lcd.setCursor(0,1);
     lcd.print("#-si *-no");
     scanKeypad();
-    atual = tecla;
+    atual = tecla;              // escaneia tecla atual para verificar se eh # ou *
 
-    if (atual == '#'){              //cstatuss=0;onfirma comando finaliza(executar função aqui ou fora?)
+    if (atual == '#'){              //confirma comando finaliza
       lcd.clear();
       lcd.print("finalizou");         //teste - transformar em coment
-      finaliza = 1;
+      finaliza = 1;                   // flag para finalizar coleta
       anterior = 0;
       atual = 0;
       tecla = 0;
@@ -455,9 +461,11 @@ void scanCommand() {
       guardanum=0;
     //break;
       }
+
+    //** COMANDO TRANSFERE DADOS
     } else if (anterior == '5'|| guardanum == '5'){
-      inicia=0;
-      statuss=0;
+      inicia=0;                     // pausa coleta de dados
+      statuss=0;                    // desativa status para sobreescrever
       guardanum = '5';
 
       lcd.setCursor(0,0);
@@ -465,14 +473,14 @@ void scanCommand() {
       lcd.setCursor(0,1);
       lcd.print("#-si *-no");
       scanKeypad();
-      atual = tecla;
+      atual = tecla;          // escaneia tecla atual para verificar se eh # ou *
 
-      if (atual == '#'){  //confirma comando tranferir (executar função aqui ou fora?)
+      if (atual == '#'){  //confirma comando tranferir
         lcd.clear();
-        lcd.print("num btn 1 e 1022"); //teste - transformar em coment
+        lcd.print("num btn 1 e 1022"); 
         tecla = 0;
         coletaNumero();
-        Serial.println("pegou um numero");
+        Serial.println("pegou um numero");  //DEBUG
         lcd.print(valor);
         anterior = 0;
         atual = 0;
@@ -486,12 +494,12 @@ void scanCommand() {
         guardanum=0;
         //break;
         }
+      }
         // else {
         //   anterior = 0;
         //   atual = 0;
         //   tecla = 0;
         // }
-    }
 }
 
 
@@ -507,7 +515,7 @@ Wire.endTransmission(63);
 
 analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
 
-init_lcd();
+init_lcd();           // inicia lcd
 
 cli();                // Desabilita interrupções globais
 configuracao_Timer0();
@@ -534,7 +542,7 @@ void loop(){
   scanCommand();
   executeCommand();
 
-  if (salvaTemp == 1){
+  if (salvaTemp == 1){    //display temperatura a cada 2s
     x=getTmedido()*100;
     uni = x % 10;
     y = x / 10;
