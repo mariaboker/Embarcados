@@ -93,16 +93,15 @@ ISR(TIMER0_COMPA_vect) {
   aux++; // alterna entre displays (0, 1, 2, 3)
   if (aux > 3) {
     aux = 0;
-
-    if (inicia == 1) {    //conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
-      timeBase++;
-      if (timeBase > 1000) { // base de tempo de 2s
-        timeBase = 0;
-        salvaTemp = 1; // flag that enables pulse counting
-      }
-      if (apertou == 1) count++;
-    }
   }
+  if (inicia == 1) {    //conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
+    timeBase++;
+    if (timeBase > 1000) { // base de tempo de 2s
+    timeBase = 0;
+    salvaTemp = 1; // flag that enables pulse counting
+   }  
+  } 
+  if (apertou == 1) count++;
 }
 
 
@@ -172,103 +171,99 @@ void scanKeypad() {
       }
 
       digitalWrite(linhas[i], HIGH);
-
-      if (pressed==1||(count >= 25)&&((digitalRead(colun1)==0)||(digitalRead(colun2)==0)||(digitalRead(colun3)==0))){
-        count = 0;
-        pressed = 1;
-        apertou = 0;
-
-        digitalWrite(linhas[0], LOW);
-        digitalWrite(linhas[1], LOW);
-        digitalWrite(linhas[2], LOW);
-        digitalWrite(linhas[3], LOW);
-
-        colunalido1 = digitalRead(colun1);
-        colunalido2 = digitalRead(colun2);
-        colunalido3 = digitalRead(colun3);
-        Serial.println("pressionou algo");
-
-        if(colunalido1==1&&colunalido2==1&&colunalido3==1){
-          digitalWrite(linhas[0], HIGH);
-          digitalWrite(linhas[1], HIGH);
-          digitalWrite(linhas[2], HIGH);
-          digitalWrite(linhas[3], HIGH);
-          Serial.println("soltou algo");
-
-          apertou = 0;
-          aux2=0;
-          pressed=0;
-          colunalido==0;
-
-          if (mapline == 1) {
-            if (mapcolun == 1) tecla = '1';
-            else if (mapcolun == 2) tecla = '2';
-            else if (mapcolun == 3) tecla = '3';
-
-          } else if (mapline == 2) {
-            if (mapcolun == 1) tecla = '4';
-            else if (mapcolun == 2) tecla = '5';
-            else if (mapcolun == 3) tecla = '6';
-
-          } else if (mapline == 3) {
-            if (mapcolun == 1) tecla = '7';
-            else if (mapcolun == 2) tecla = '8';
-            else if (mapcolun == 3) tecla = '9';
-          
-          } else if (mapline == 4){
-            if (mapcolun == 1) tecla = '#';
-            else if (mapcolun == 2) tecla = '0';
-            else if (mapcolun == 3) tecla = '*';
-            
-            Serial.println(tecla);
-          }
-        }
-      }
     }
   }
+  if (pressed==1||(count >= 25)&&((digitalRead(colun1)==0)||(digitalRead(colun2)==0)||(digitalRead(colun3)==0))){
+    count = 0;
+    pressed = 1;
+    apertou = 0;
+
+    digitalWrite(linhas[0], LOW);
+    digitalWrite(linhas[1], LOW);
+    digitalWrite(linhas[2], LOW);
+    digitalWrite(linhas[3], LOW);
+
+    colunalido1 = digitalRead(colun1);
+    colunalido2 = digitalRead(colun2);
+    colunalido3 = digitalRead(colun3);
+    Serial.println("pressionou algo");
+
+    if(colunalido1==1&&colunalido2==1&&colunalido3==1){
+    digitalWrite(linhas[0], HIGH);
+    digitalWrite(linhas[1], HIGH);
+    digitalWrite(linhas[2], HIGH);
+    digitalWrite(linhas[3], HIGH);
+    Serial.println("soltou algo");
+
+    apertou = 0;
+    aux2=0;
+    pressed=0;
+    colunalido==0;
+
+    if (mapline == 1) {
+      if (mapcolun == 1) tecla = '1';
+      else if (mapcolun == 2) tecla = '2';
+      else if (mapcolun == 3) tecla = '3';
+
+    } else if (mapline == 2) {
+      if (mapcolun == 1) tecla = '4';
+      else if (mapcolun == 2) tecla = '5';
+      else if (mapcolun == 3) tecla = '6';
+
+    } else if (mapline == 3) {
+      if (mapcolun == 1) tecla = '7';
+      else if (mapcolun == 2) tecla = '8';
+      else if (mapcolun == 3) tecla = '9';
+          
+    } else if (mapline == 4){
+      if (mapcolun == 1) tecla = '#';
+      else if (mapcolun == 2) tecla = '0';
+      else if (mapcolun == 3) tecla = '*';
+    } 
+     Serial.println(tecla); 
+  }
+ }
 }
 
 void coletaNumero(){    //coleta numero de teclado para função transferee
-valor = 0;
-k=0;
-j=0;
-tecla=0;
-do { // enquanto nao eh o asterisco, le teclado
-scanKeypad();
-  if(tecla != 0){
-    lido[j]=tecla-48;
-    Serial.println(tecla); // debug
-    Serial.println(lido[j]); // debug
-    if (tecla!='#'){
-      tecla=0;
-      j++;
+  valor = 0;
+  k=0;
+  j=0;
+  tecla=0;
+  do { // enquanto nao eh o asterisco, le teclado
+  scanKeypad();
+    if(tecla != 0){
+      lido[j]=tecla-48;
+      Serial.println(tecla); // debug
+      Serial.println(lido[j]); // debug
+      if (tecla!='#'){
+        tecla=0;
+        j++;
+      }
+  //Serial.println("tecla: "); // debug  
     }
-//Serial.println("tecla: "); // debug  
-  }
-} while(tecla!='#');
+  } while(tecla!='#');
 
-if (lido[1]==-13){    //numero de 1 digito
-valor = lido[0];
-}else if (lido[2]==-13){  //numero de 2 digitos
-  for(j=1;j>=0;j--){
-  valor = valor + lido[j]*pow(10,k);
-  k++;
+  if (lido[1]==-13){    //numero de 1 digito
+  valor = lido[0];
+  } else if (lido[2]==-13) {  //numero de 2 digitos
+      for(j=1;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
+      }
+  } else if (lido[3]==-13){  //numero de 3
+      for(j=2;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
+    }
+  } else if (lido[4]==-13){
+    for(j=3;j>=0;j--){
+    valor = valor + lido[j]*pow(10,k);
+    k++;
+    }
   }
-}else if (lido[3]==-13){  //numero de 3
-  for(j=2;j>=0;j--){
-  valor = valor + lido[j]*pow(10,k);
-  k++;
-  }
-}else if (lido[4]==-13){
-  for(j=3;j>=0;j--){
-  valor = valor + lido[j]*pow(10,k);
-  k++;
-  }
-
-lcd.setCursor(0,1);  //Seta a posição do cursor
-Serial.print("cabou ja");
-
-}
+  lcd.setCursor(0,1);  //Seta a posição do cursor
+  Serial.print("cabou ja"); 
 }
 
 void serialEvent(){
@@ -294,33 +289,29 @@ void executeCommand() {
     reset = 0;
     inicia = 0;
     //salvaTemp = 0;
-
+    }
     if (inicia == 1){
       if (salvaTemp == 1) {
         //salva valor na posição da memória
         countMed++;
         salvaTemp = 0;
       }
-
-      if (finaliza == 1) {
-        inicia == 0;
-        finaliza == 0;    
-
-        if (statuss == 1) {        //mostra statuss da memoria
-          lcd.clear();        //sobreescreve tudo oq que estava antes no lcd
-          lcd.setCursor(0,0);
-          lcd.print(countMed);
-          lcd.setCursor(0,1);
-          lcd.print(freeSpace);
-
-          if (transfere == 1 ) {
-          //transfereir da memoria para monitor serial
-          transfere = 0;
-          }
-        }
-      }
     }
-  }
+    if (finaliza == 1) {
+      inicia == 0;
+      finaliza == 0;    
+    }
+    if (statuss == 1) {        //mostra statuss da memoria
+      lcd.clear();        //sobreescreve tudo oq que estava antes no lcd
+      lcd.setCursor(0,0);
+      lcd.print(countMed);
+      lcd.setCursor(0,1);
+      lcd.print(freeSpace);
+    }
+    if (transfere == 1 ) {
+    //transfereir da memoria para monitor serial
+    transfere = 0;
+    }
 }
 
 
@@ -435,7 +426,7 @@ void scanCommand() {
       tecla = 0;
       guardanum=0;
     //break;
-
+      }
     } else if (anterior == '5'|| guardanum == '5'){
       inicia=0;
       statuss=0;
@@ -466,15 +457,13 @@ void scanCommand() {
         tecla = 0;
         guardanum=0;
         //break;
-
+        }
         // else {
         //   anterior = 0;
         //   atual = 0;
         //   tecla = 0;
         // }
-      }
-    }
-  }
+    }  
 }
 
 
@@ -526,9 +515,8 @@ void loop(){
     cent = z % 10;
     w = z / 10;
     mil = w % 10;
-    
-  displayMode(uni,dez,cent,mil);
   }
+  displayMode(uni,dez,cent,mil);
 }
 
 
