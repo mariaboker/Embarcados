@@ -302,7 +302,8 @@ double getTmedido() {               //get temp sensor
 void executeCommand() {
   // se comando foi reset apaga toda a memoria e recomeca
   if (reset == 1) {
-
+    lcd.clear();
+    lcd.print("resetando");         //DEBUG
     // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
     countMed = 0;   // reseta contador de espacos ocupados
     reset = 0;      // reseta flag para um proximo reset
@@ -312,6 +313,8 @@ void executeCommand() {
 
     // se comando foi inicializar, inicia coleta de dados
     if (inicia == 1){
+      lcd.clear();
+      lcd.print("iniciou");         //DEBUG
       if (salvaTemp == 1) {
         // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
         countMed++;       // incrementa espaco ocupado
@@ -321,13 +324,18 @@ void executeCommand() {
 
     // se comando foi finalizar, finaliza coleta de dados
     if (finaliza == 1) {
+      lcd.clear();
+      lcd.print("finalizou");         //DEBUG
       inicia == 0;      // desliga coleta de dados
       finaliza == 0;    // reseta flag para um proximo comando finaliza
+
     }
 
     // se comando foi status, mostra status no lcd
     if (statuss == 1) {
-      lcd.clear();            //sobreescreve tudo oq que estava antes no lcd
+      lcd.clear();              //sobreescreve tudo oq que estava antes no lcd
+      lcd.setCursor(7,0);
+      lcd.print("mostrei"); //teste - transformar em coment
       lcd.setCursor(0,0);
       lcd.print(countMed);    // display numero de espacos ocupados
       lcd.setCursor(0,1);
@@ -338,6 +346,8 @@ void executeCommand() {
     if (transfere == 1 ) {
     // AQUI DEVE TER O CODIGO PARA TRANSFERIR
     transfere = 0;        // reset flag
+    lcd.clear();
+    lcd.print("transferiu");         //DEBUG
     }
 }
 
@@ -359,8 +369,6 @@ void scanCommand() {
     atual = tecla;    // escaneia tecla atual para verificar se eh # ou *
 
     if (atual == '#'){  //confirma comando reset
-      lcd.clear();
-      lcd.print("resetando"); //teste - transformar em coment
       reset = 1;              // flag para comando reset
       anterior = 0;
       atual = 0;
@@ -388,8 +396,6 @@ void scanCommand() {
     atual = tecla;          // escaneia tecla atual para verificar se eh # ou *
 
     if (atual == '#'){  //confirma comando statuss
-      lcd.clear();
-      lcd.print("mostrei"); //teste - transformar em coment
       statuss=1;            // flag para mostrar estado
       anterior = 0;
       atual = 0;
@@ -417,8 +423,6 @@ void scanCommand() {
     atual = tecla;            // escaneia tecla atual para verificar se eh # ou *
 
     if (atual == '#'){              //confirma comando inicia
-      lcd.clear();
-      lcd.print("iniciou");         //teste - transformar em coment
       inicia = 1;                   //flag para iniciar coleta
       anterior = 0;
       atual = 0;
@@ -446,8 +450,6 @@ void scanCommand() {
     atual = tecla;              // escaneia tecla atual para verificar se eh # ou *
 
     if (atual == '#'){              //confirma comando finaliza
-      lcd.clear();
-      lcd.print("finalizou");         //teste - transformar em coment
       finaliza = 1;                   // flag para finalizar coleta
       anterior = 0;
       atual = 0;
@@ -480,8 +482,9 @@ void scanCommand() {
         lcd.print("num btn 1 e 1022"); 
         tecla = 0;
         coletaNumero();
+        transfere = 1;
         Serial.println("pegou um numero");  //DEBUG
-        lcd.print(valor);
+        Serial.println(valor);
         anterior = 0;
         atual = 0;
         tecla = 0;
