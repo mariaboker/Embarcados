@@ -5,7 +5,7 @@
 /*                                                                                      */
 /* Grupo: Victor Perez,148122 e Maria Kersanach, 156571                                 */
 /* Entrega em XX de Abril de 2018                                                       */
-/*                                                                   
+/*
 /* Link para video: XX                                            */
 /* Link para roteiro: XX                                          */
 /*                                                                                      */
@@ -91,27 +91,27 @@ void configuracao_Timer0() {
 ISR(TIMER0_COMPA_vect) {
 
   // alterna entre displays (0, 1, 2, 3)
-  aux++; 
+  aux++;
   if (aux > 3) {
     aux = 0;
   }
 
   //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
-  if (inicia == 1) {        
+  if (inicia == 1) {
     timeBase++;
     if (timeBase > 1000) {  // base de tempo de 2s
     timeBase = 0;
     salvaTemp = 1;          // flag para salvar temperatura na memoria
-   }  
-  } 
+   }
+  }
 
   //flag para contar debouncing
-  if (apertou == 1) count++;  
+  if (apertou == 1) count++;
 }
 
 //*** MOSTRA NO 7 SEGMENTOS ***//
 // Funcao que mostra no display 7 segmentos através do I2C
-void displayMode (int a,int b,int c,int d){  
+void displayMode (int a,int b,int c,int d){
   if (aux==0) {                 //algarismo unidade
     Wire.beginTransmission(63);
     Wire.write(a+224);
@@ -224,13 +224,13 @@ void scanKeypad() {
       if (mapcolun == 1) tecla = '7';
       else if (mapcolun == 2) tecla = '8';
       else if (mapcolun == 3) tecla = '9';
-          
+
     } else if (mapline == 4){
       if (mapcolun == 1) tecla = '#';
       else if (mapcolun == 2) tecla = '0';
       else if (mapcolun == 3) tecla = '*';
-    } 
-     Serial.println(tecla); 
+    }
+     Serial.println(tecla);
 
   }
  }
@@ -246,14 +246,14 @@ void coletaNumero(){    //coleta numero de teclado para função transferee
   do {        // enquanto nao eh o asterisco, le teclado
   scanKeypad();
     if(tecla != 0){
-      lido[j]=tecla-48;
+      lido[j]=tecla-48;       //salva num vetor cada digito para ser tratado depois
       Serial.println(tecla); // debug
       Serial.println(lido[j]); // debug
       if (tecla!='#'){
         tecla=0;
         j++;
       }
-  //Serial.println("tecla: "); // debug  
+  //Serial.println("tecla: "); // debug
     }
   } while(tecla!='#');
 
@@ -276,7 +276,7 @@ void coletaNumero(){    //coleta numero de teclado para função transferee
     }
   }
   lcd.setCursor(0,1);         //Seta a posição do cursor
-  Serial.print("cabou ja"); 
+  Serial.print("cabou ja");
 }
 
 //*** INTERRUPCAO EXTERNA ***//
@@ -300,34 +300,44 @@ double getTmedido() {               //get temp sensor
 //*** EXECUCAO DE COMANDOS LIDOS NO TECLADO ***//
 // Funcao que efetivamente executa os comandos depois de serem lidos no teclado
 void executeCommand() {
+  // se comando foi reset apaga toda a memoria e recomeca
   if (reset == 1) {
-    // AQUI DEVE APAGAR A MEMORIA;
-    countMed = 0;
-    reset = 0;
-    inicia = 0;
+
+    // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
+    countMed = 0;   // reseta contador de espacos ocupados
+    reset = 0;      // reseta flag para um proximo reset
+    inicia = 0;     // desliga coleta de dados
     //salvaTemp = 0;
     }
+
+    // se comando foi inicializar, inicia coleta de dados
     if (inicia == 1){
       if (salvaTemp == 1) {
-        //salva valor na posição da memória
-        countMed++;
-        salvaTemp = 0;
+        // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
+        countMed++;       // incrementa espaco ocupado
+        salvaTemp = 0;    // reseta flag para proximo dado
       }
     }
+
+    // se comando foi finalizar, finaliza coleta de dados
     if (finaliza == 1) {
-      inicia == 0;
-      finaliza == 0;    
+      inicia == 0;      // desliga coleta de dados
+      finaliza == 0;    // reseta flag para um proximo comando finaliza
     }
-    if (statuss == 1) {        //mostra statuss da memoria
+
+    // se comando foi status, mostra status no lcd
+    if (statuss == 1) {
       lcd.clear();            //sobreescreve tudo oq que estava antes no lcd
       lcd.setCursor(0,0);
-      lcd.print(countMed);
+      lcd.print(countMed);    // display numero de espacos ocupados
       lcd.setCursor(0,1);
-      lcd.print(freeSpace);
+      lcd.print(freeSpace);   // display numero de espacos vazios
     }
+
+    // se comando foi transfere, transfere dados para monitor serial
     if (transfere == 1 ) {
-    //transfereir da memoria para monitor serial
-    transfere = 0;
+    // AQUI DEVE TER O CODIGO PARA TRANSFERIR
+    transfere = 0;        // reset flag
     }
 }
 
@@ -481,7 +491,7 @@ void scanCommand() {
         //   atual = 0;
         //   tecla = 0;
         // }
-    }  
+    }
 }
 
 
@@ -536,5 +546,3 @@ void loop(){
   }
   displayMode(uni,dez,cent,mil);
 }
-
-
