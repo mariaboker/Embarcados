@@ -40,8 +40,8 @@ int j=0;
 int k=0;
 int valor=0;
 int lido[5];
-int timeBase = 0; // variavel para delimitar tempo na contagem de rpm
-int pulseCount = 0; // flag que indica que a contagem de rpm deve ser realizada (baseia-se no timeBase)
+int timeBase = 0;       // variavel para delimitar tempo na contagem de rpm
+int pulseCount = 0;     // nao usado
 
 int aux=0;
 int pressed=0;;
@@ -56,6 +56,12 @@ char guardanum=0;
 int apertou=0;
 int count=0;
 
+int msbTemp = 0;    //MSB valor para função crackTemp
+int lsbTemp = 0;    //LSB valor para função crackTemp
+
+int msbFreespace = 0; //MSB para valor de freespace
+int lsbFreespace = 0;  //LSB para valor de freespace
+
 int colunalido;
 int colunalido1;
 int colunalido2;
@@ -63,20 +69,20 @@ int colunalido3;
 int mapcolun=0;
 int mapline=0;
 
-int analogPin = A3;
+int analogPin = A3;     //nao usado
 int colun1=3;
 int colun2=2;
 int colun3=15;
 int linhas[4] = {11,10,9,8};
 
-int inicia = 0;
-int salvaTemp = 0;
-int reset = 0;
-int finaliza = 0;
+int inicia = 0;         // flag para comando iniciar
+int salvaTemp = 0;      // flag para escrever temperatura na memoria
+int reset = 0;          // flag para comando reset
+int finaliza = 0;       // flag para comando finalizar coleta
 int countMed = 0;
-int statuss = 0;
-int freeSpace = 0;
-int transfere = 0;
+int statuss = 0;        // flag para comando mostra status
+int freeSpace = 1022;   // quantidade inicial de freespace na memoria
+int transfere = 0;      // flag para comando transfere
 
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
@@ -309,6 +315,7 @@ void executeCommand() {
     reset = 0;      // reseta flag para um proximo reset
     inicia = 0;     // desliga coleta de dados
     //salvaTemp = 0;
+    freeSpace = 1022; //retoma valor inicial de espaço livre
     }
 
     // se comando foi inicializar, inicia coleta de dados
@@ -316,6 +323,8 @@ void executeCommand() {
       lcd.clear();
       lcd.print("iniciou");         //DEBUG
       if (salvaTemp == 1) {
+        crackTemp();
+        writeMemo();
         // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
         countMed++;       // incrementa espaco ocupado
         salvaTemp = 0;    // reseta flag para proximo dado
@@ -503,6 +512,80 @@ void scanCommand() {
         //   atual = 0;
         //   tecla = 0;
         // }
+}
+
+// função para dividir valor da temperatura em tamanhos de 2 bytes
+void crackTemp(){
+    int a = getTmedido()*10;
+    msbTemp = a/256;
+    lsbTemp = a%256;
+    
+}
+
+// função para escrever dado na memória estilo datalogger (por enquant só para o primeiro 'chunk' (80))
+void writeMemo(){
+    Wire.beginTransmission(80); // endereco de memoria
+    Wire.write(countPosition); // adress
+    Wire.write(msbTemp); // data
+    Wire.endTransmission(80); 
+    Wire.beginTransmission(80); // endereco de memoria
+    Wire.write(countPosition+1); // adress
+    Wire.write(lsbTemp); // data
+    Wire.endTransmission(80); 
+    countPosition = countPosition+2;
+    countMed++;
+    freespace = 1022-countMed;
+    
+}
+
+// função para ler valor da memoria e possivelmente ja passar pela serial
+void readMemo(){
+    
+    
+}
+
+//Funcao para pegar quantidade de espaço livre na memória da memória
+void getFreespace(){
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(255);                 // ultima posicao da memoria onde fica qtdd de freespace LSB
+    Wire.endTransmission(87);
+    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
+    while(Wire.available())      // slave may send less than requested
+    { 
+        int c = Wire.read();      // catch valor
+        Serial.print(c);          // DEBUG
+    }
+    delay(500);
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(254);                 // penultima posicao da memoria onde fica qtdd de freespace MSB
+    Wire.endTransmission(87);
+    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
+    while(Wire.available())      // slave may send less than requested
+    { 
+        int d = Wire.read();      // catch valor
+        Serial.print(c);          // DEBUG
+    }
+    delay(500);
+    freeSpace = 256*d+c;        //junta LSB e MSB para formar a quantidade de freespace na memoria
+    
+}
+
+// função para escrever nova quantidade de freespace na posição especifica para isso
+void setFreespace(){
+    msbFreespace = freeSpace/256;
+    lsbFreespace = freeSpace%256;
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(255);                 // ultima posicao da memoria onde fica qtdd de freespace LSB
+    Wire.endTransmission(87);
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(lsbFreespace);        // escreve valor atual de freespace LSB
+    Wire.endTransmission(87);
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(254);                 // penultima posicao da memoria onde fica qtdd de freespace MSB
+    Wire.endTransmission(87);
+    Wire.beginTransmission(87);      // endereco de memoria
+    Wire.write(msbFreespace);        // escreve valor atual de freespace MSB
+    Wire.endTransmission(87);
 }
 
 
