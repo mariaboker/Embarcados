@@ -311,6 +311,7 @@ void executeCommand() {
     lcd.clear();
     lcd.print("resetando");         //DEBUG
     // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
+    countPosition = 0;
     countMed = 0;   // reseta contador de espacos ocupados
     reset = 0;      // reseta flag para um proximo reset
     inicia = 0;     // desliga coleta de dados
@@ -323,10 +324,9 @@ void executeCommand() {
       lcd.clear();
       lcd.print("iniciou");         //DEBUG
       if (salvaTemp == 1) {
-        crackTemp();
-        writeMemo();
-        // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
-        countMed++;       // incrementa espaco ocupado
+        crackTemp();      // quebra em MSB e LSB values
+        writeMemo();      // escreve na memoria
+        //countMed++;       // incrementa espaco ocupado
         salvaTemp = 0;    // reseta flag para proximo dado
       }
     }
@@ -524,17 +524,18 @@ void crackTemp(){
 
 // função para escrever dado na memória estilo datalogger (por enquant só para o primeiro 'chunk' (80))
 void writeMemo(){
-    Wire.beginTransmission(80); // endereco de memoria
-    Wire.write(countPosition); // adress
-    Wire.write(msbTemp); // data
+    Wire.beginTransmission(80);           // endereco de memoria
+    Wire.write(countPosition);            // primeira posição de memoria
+    Wire.write(msbTemp);                  // valors MSB de temperatura
     Wire.endTransmission(80); 
-    Wire.beginTransmission(80); // endereco de memoria
-    Wire.write(countPosition+1); // adress
-    Wire.write(lsbTemp); // data
+    Wire.beginTransmission(80);           // endereco de memoria
+    Wire.write(countPosition+1);          // segunda posição de memoria
+    Wire.write(lsbTemp);                  // valor LSB de temperatura
     Wire.endTransmission(80); 
-    countPosition = countPosition+2;
-    countMed++;
+    countPosition = countPosition+2;      // seta para proximo espaço disponivel 
+    countMed++;                           // atualiza quantidade de medidas
     freespace = 1022-countMed;
+    setFreespace();                       // atualiza na memória o espaço disponivel
     
 }
 
@@ -544,6 +545,7 @@ void readMemo(){
     
 }
 
+// PROVAVELMENTE NÃO NECESSÁRIA
 //Funcao para pegar quantidade de espaço livre na memória da memória
 void getFreespace(){
     Wire.beginTransmission(87);      // endereco de memoria
