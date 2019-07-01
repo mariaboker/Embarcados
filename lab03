@@ -59,8 +59,8 @@ int count=0;
 int msbTemp = 0;    //MSB valor para função crackTemp
 int lsbTemp = 0;    //LSB valor para função crackTemp
 
-int msbFreespace = 0; //MSB para valor de freespace
-int lsbFreespace = 0;  //LSB para valor de freespace
+int msbOcupado = 0; //MSB para valor de espaço ocuapdo
+int lsbOcupado = 0;  //LSB para valor de espaço ocupado
 
 int colunalido;
 int colunalido1;
@@ -282,7 +282,7 @@ void coletaNumero(){    //coleta numero de teclado para função transferee
     }
   }
   lcd.setCursor(0,1);         //Seta a posição do cursor
-  Serial.print("cabou ja");
+  Serial.print(valor);          //DEBUG
 }
 
 //*** INTERRUPCAO EXTERNA ***//
@@ -310,9 +310,9 @@ void executeCommand() {
   if (reset == 1) {
     lcd.clear();
     lcd.print("resetando");         //DEBUG
-    // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
     countPosition = 0;
     countMed = 0;   // reseta contador de espacos ocupados
+    ocupiedSpace(); // "apaga" a memória
     reset = 0;      // reseta flag para um proximo reset
     inicia = 0;     // desliga coleta de dados
     //salvaTemp = 0;
@@ -535,58 +535,30 @@ void writeMemo(){
     countPosition = countPosition+2;      // seta para proximo espaço disponivel 
     countMed++;                           // atualiza quantidade de medidas
     freespace = 1022-countMed;
-    setFreespace();                       // atualiza na memória o espaço disponivel
+    ocupiedSpace();                       // atualiza na memória o espaço disponivel
     
 }
 
 // função para ler valor da memoria e possivelmente ja passar pela serial
 void readMemo(){
     
-    
 }
 
-// PROVAVELMENTE NÃO NECESSÁRIA
-//Funcao para pegar quantidade de espaço livre na memória da memória
-void getFreespace(){
-    Wire.beginTransmission(87);      // endereco de memoria
-    Wire.write(255);                 // ultima posicao da memoria onde fica qtdd de freespace LSB
-    Wire.endTransmission(87);
-    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
-    while(Wire.available())      // slave may send less than requested
-    { 
-        int c = Wire.read();      // catch valor
-        Serial.print(c);          // DEBUG
-    }
-    delay(500);
-    Wire.beginTransmission(87);      // endereco de memoria
-    Wire.write(254);                 // penultima posicao da memoria onde fica qtdd de freespace MSB
-    Wire.endTransmission(87);
-    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
-    while(Wire.available())      // slave may send less than requested
-    { 
-        int d = Wire.read();      // catch valor
-        Serial.print(c);          // DEBUG
-    }
-    delay(500);
-    freeSpace = 256*d+c;        //junta LSB e MSB para formar a quantidade de freespace na memoria
-    
-}
-
-// função para escrever nova quantidade de freespace na posição especifica para isso
-void setFreespace(){
-    msbFreespace = freeSpace/256;
-    lsbFreespace = freeSpace%256;
+// função para escrever nova quantidade de espaço ocupado na posição especifica para isso
+void ocupiedSpace(){
+    msbOcupado = countMed/256;
+    lsbOcupado = countMed%256;
     Wire.beginTransmission(87);      // endereco de memoria
     Wire.write(255);                 // ultima posicao da memoria onde fica qtdd de freespace LSB
     Wire.endTransmission(87);
     Wire.beginTransmission(87);      // endereco de memoria
-    Wire.write(lsbFreespace);        // escreve valor atual de freespace LSB
+    Wire.write(lsbOcupado);        // escreve valor atual de freespace LSB
     Wire.endTransmission(87);
     Wire.beginTransmission(87);      // endereco de memoria
     Wire.write(254);                 // penultima posicao da memoria onde fica qtdd de freespace MSB
     Wire.endTransmission(87);
     Wire.beginTransmission(87);      // endereco de memoria
-    Wire.write(msbFreespace);        // escreve valor atual de freespace MSB
+    Wire.write(msbOcupado);        // escreve valor atual de freespace MSB
     Wire.endTransmission(87);
 }
 
@@ -594,33 +566,35 @@ void setFreespace(){
 
 void setup(){
 //init serial e displays 7 seg
-Serial.begin(9600);       // taxa de transmissao serial
-Wire.begin();
-Wire.setClock(400000);    // standard value is 100000
-Wire.beginTransmission(63);
-Wire.write(240);          //Desliga displays (b11110000)
-Wire.endTransmission(63);
+    Serial.begin(9600);       // taxa de transmissao serial
+    Wire.begin();
+    Wire.setClock(400000);    // standard value is 100000
+    Wire.beginTransmission(63);
+    Wire.write(240);          //Desliga displays (b11110000)
+    Wire.endTransmission(63);
+    ocupiedSpace();            //escreve valor inicial de espaços ocupados na memoria
 
-analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
 
-init_lcd();           // inicia lcd
+    analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
 
-cli();                // Desabilita interrupções globais
-configuracao_Timer0();
-sei();                // Habilita interrupcoes globais
+    init_lcd();           // inicia lcd
+
+    cli();                // Desabilita interrupções globais
+    configuracao_Timer0();
+    sei();                // Habilita interrupcoes globais
 
 //teclado matricial
-pinMode(3, INPUT);  //coluna 1
-pinMode(2, INPUT);  //coluna 2
-pinMode(15, INPUT); //coluna 3
-pinMode(11, OUTPUT);  //linha 1
-pinMode(10, OUTPUT);  //linha 2
-pinMode(9, OUTPUT); //linha 3
-pinMode(8, OUTPUT); //linha 4
-digitalWrite (11,HIGH);
-digitalWrite (10,HIGH);
-digitalWrite (9,HIGH);
-digitalWrite (8,HIGH);
+    pinMode(3, INPUT);  //coluna 1
+    pinMode(2, INPUT);  //coluna 2
+    pinMode(15, INPUT); //coluna 3
+    pinMode(11, OUTPUT);  //linha 1
+    pinMode(10, OUTPUT);  //linha 2
+    pinMode(9, OUTPUT); //linha 3
+    pinMode(8, OUTPUT); //linha 4
+    digitalWrite (11,HIGH);
+    digitalWrite (10,HIGH);
+    digitalWrite (9,HIGH);
+    digitalWrite (8,HIGH);
 
 }
 
@@ -642,3 +616,31 @@ void loop(){
   }
   displayMode(uni,dez,cent,mil);
 }
+
+
+//// PROVAVELMENTE NÃO NECESSÁRIA
+////Funcao para pegar quantidade de espaço livre na memória da memória
+//void getFreespace(){
+//    Wire.beginTransmission(87);      // endereco de memoria
+//    Wire.write(255);                 // ultima posicao da memoria onde fica qtdd de freespace LSB
+//    Wire.endTransmission(87);
+//    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
+//    while(Wire.available())      // slave may send less than requested
+//    { 
+//        int c = Wire.read();      // catch valor
+//        Serial.print(c);          // DEBUG
+//    }
+//    delay(500);
+//    Wire.beginTransmission(87);      // endereco de memoria
+//    Wire.write(254);                 // penultima posicao da memoria onde fica qtdd de freespace MSB
+//    Wire.endTransmission(87);
+//    Wire.requestFrom(87, 1);          // request 1 byte da eeprom
+//    while(Wire.available())      // slave may send less than requested
+//    { 
+//        int d = Wire.read();      // catch valor
+//        Serial.print(c);          // DEBUG
+//    }
+//    delay(500);
+//    freeSpace = 256*d+c;        //junta LSB e MSB para formar a quantidade de freespace na memoria
+//    
+//}
