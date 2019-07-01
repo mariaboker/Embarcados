@@ -1,0 +1,331 @@
+//bibliotecas
+#include <Wire.h> 
+#include <LiquidCrystal.h>
+
+//definições: serial - bluetooth
+String comando;
+String numero;
+String comando_parcial;
+String velocidade;
+char teste;
+int posicao;
+int velocidade_comando = 0;
+int tamanho;
+int f_vel = 1;
+int f_vent = 1;
+int f_exaust = 0;
+int f_para = 0;
+
+//definições: contagem + I2C + displays 7 segmentos
+const int encoder = 2;
+int conta_volta = 0;
+int armazena_volta = 0;
+int quantidade_volta = 0;
+unsigned int rotacoes_rpm = 0;
+int unidade = 0;
+int dezena = 0;
+int centena = 0;
+int milhar = 0;
+int conta_display = 0;
+int pode_contar = 0;
+int aux;
+
+unsigned char f_unidade = 1;
+unsigned char f_dezena = 1;
+unsigned char f_centena = 1;
+unsigned char f_milhar = 1;
+
+volatile unsigned int tempo_motor = 0;
+volatile unsigned int tempo_display = 0;
+
+//definições: LCD
+//Define os pinos que serão utilizados para ligação ao display
+LiquidCrystal lcd(3, 4, 5, 6, 7, 8);
+int direcao = 1;
+int inversao = 0;
+
+
+//definições: Ponte H
+int velocidade_definida = 9; //Pino que define a velocidade do motor está ligado ao pino 1 do L293D e a Digital 9 do Arduino 
+int entrada1 = 10; //Entrada do terminal do motor ligado ao pino 2 do L293D e a Digital 10 do Arduino 
+int entrada2 = 11; //Entrada do terminal do motor ligado ao pino 7 do L293D e a Digital 11 do Arduino 
+
+
+void setup(){
+  pinMode(2,INPUT); //encoder
+  attachInterrupt(digitalPinToInterrupt(2), conta_velocidade, RISING); //Definição da interrupção que recebe o sinal do encoder
+
+  configuracao_Timer0();
+
+  Wire.begin();    
+  Wire.setClock(100000);
+
+  Serial.begin(9600);
+  
+  lcd.begin(16, 2); //Define o número de colunas e linhas do LCD
+  
+  pinMode(velocidade_definida, INPUT); //ponte H
+  pinMode(entrada1, INPUT); //ponte H
+  pinMode(entrada2, INPUT); //ponte H
+  
+}
+
+void configuracao_Timer0(){
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
+  // Relogio = 16e6 Hz
+  // Prescaler = 256
+  // Faixa = 125 (contagem de 0 a OCR0A = 124)
+  // Intervalo entre interrupcoes: (Prescaler/Relogio)*Faixa = (256/16e6)*(124+1) = 0.002s
+ 
+  // TCCR0A – Timer/Counter Control Register A
+  // COM0A1 COM0A0 COM0B1 COM0B0 – – WGM01 WGM00
+  // 0    0   0   0       1   0
+  TCCR0A = 0x02;
+
+  // OCR0A – Output Compare Register A
+  OCR0A = 124;
+
+  // TIMSK0 – Timer/Counter Interrupt Mask Register
+  // – – – – – OCIE0B OCIE0A TOIE0
+  // – – – – – 0    1   0
+  TIMSK0 = 0x02;
+ 
+  // TCCR0B – Timer/Counter Control Register B
+  // FOC0A FOC0B – – WGM02 CS02 CS01 CS0
+  // 0  0       0   1 0 0
+  TCCR0B = 0x04;
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+
+ISR(TIMER0_COMPA_vect){
+  
+  tempo_motor++;
+
+  if(tempo_motor>=1000){
+  armazena_volta = conta_volta;
+  conta_volta = 0;
+  tempo_motor = 0;
+  pode_contar = 1;
+  }
+ 
+  tempo_display++;
+
+}
+
+
+void loop(){
+  //Serial - bluetooth
+  if (Serial.available()){
+    teste = char(Serial.read());
+  if(teste != '*'){
+    comando += teste;
+  }else if(teste == '*'){
+    posicao = comando.indexOf(' ');
+    comando_parcial = comando.substring(0,posicao+1);
+    numero = comando.substring(posicao+1);
+    tamanho = numero.length();
+    aux = numero.toInt();
+    if(comando_parcial == "VEL "){
+      if(aux <= 100){
+        comando += "%";
+        f_vel = 1;
+        velocidade_comando=aux;
+        Serial.println(comando);
+      }
+      else if(aux >= 100){
+        Serial.println("ERRO: PARÂMETRO INCORRETO");
+      }
+      if(tamanho == 0){
+        Serial.println("ERRO: PARÂMETRO AUSENTE");
+      }
+    }
+    else if(comando == "VENT"){
+          
+        if(rotacoes_rpm == 0||direcao==1){
+          f_vent = 1;
+        }
+        else{
+          digitalWrite(entrada1, LOW); 
+          digitalWrite(entrada2, LOW);
+          inversao = 1;
+          //analogWrite(velocidade_definida,0);
+          f_vent = 1;
+        }
+        direcao = 1;
+      Serial.println("OK VENT");
+    }
+    else if(comando == "EXAUST"){
+             
+        if(rotacoes_rpm == 0||direcao==2){
+          f_exaust = 1;  
+        }
+        else{
+          digitalWrite(entrada1, LOW); 
+          digitalWrite(entrada2, LOW);
+          inversao = 1;
+          //analogWrite(velocidade_definida,0);
+          f_exaust = 1;
+        }
+         direcao = 2;
+      Serial.println("OK EXAUST");
+    }
+    else if(comando == "PARA"){
+      f_para = 1;
+      direcao = 3;
+      velocidade_comando = 0;
+      Serial.println("OK PARA");
+    }
+    else if(comando == "RETVEL"){
+      velocidade = String(rotacoes_rpm);
+      comando = "";
+      comando += "VEL: ";
+      comando += velocidade;
+      comando += " RPM";
+      Serial.println(comando);
+    }
+    else{
+      Serial.println("ERRO: COMANDO INEXISTENTE");
+    }
+      comando = "";
+  }
+  }
+  
+  //Ponte H 
+  //Define a velocidade de rotacao
+   if(f_vel == 1){
+     analogWrite(velocidade_definida,((255*velocidade_comando)/100));
+     escreve(direcao, velocidade_comando);
+     f_vel = 0;
+   }
+  if(inversao == 1 && rotacoes_rpm ==0){
+    inversao = 0;
+  }
+   if(f_vent == 1 && inversao == 0){ //motor no sentido anti horário
+      digitalWrite(entrada1, HIGH); 
+      digitalWrite(entrada2, LOW);
+   }
+   else if(f_exaust == 1 && inversao == 0){ //motor no sentido horário
+      digitalWrite(entrada1, LOW); 
+      digitalWrite(entrada2, HIGH);
+   }
+   else if(f_para == 1){//motor parado
+     digitalWrite(entrada1, LOW); 
+     digitalWrite(entrada2, LOW);
+     analogWrite(velocidade_definida,0);
+   }
+  //Serial.println(inversao);
+  //contagem da rotação + envio para displays
+  envia_rotacao();
+
+  if(pode_contar == 1){
+    rotacoes_rpm = armazena_volta*15; //esse valor rotações_rpm deve ser enviado para os displays via I2C
+
+    unidade = (rotacoes_rpm%10);
+    dezena = ((rotacoes_rpm%100)/10);
+    centena = ((rotacoes_rpm%1000)/100);
+    milhar = ((rotacoes_rpm%10000)/1000);
+
+    pode_contar = 0;
+  }  
+
+  //LCD 
+   if(f_vent==1 && inversao == 0){
+  escreve(direcao, velocidade_comando);
+    f_vent = 0;
+   }
+
+   if(f_exaust == 1 && inversao == 0){
+  escreve(direcao, velocidade_comando);
+    f_exaust = 0;
+   }
+
+   if(f_para == 1){
+  escreve(direcao, velocidade_comando);
+    f_para = 0;
+   }
+}
+
+//função de contagem toda vez que a interrupção via encoder é acionada
+void conta_velocidade(){
+  conta_volta++;
+}
+
+//função para envio dos números para os displays de 7 segmentos
+void envia_rotacao(){
+  switch(tempo_display){
+  case 0://transmite a unidade
+      if(f_unidade){
+        transmissao(B11100000+unidade); //habilita display menos significativo
+        f_unidade = 0;
+      }
+      break;
+  case 2://transmite a dezena
+      if(f_dezena){
+        transmissao(B11010000+dezena); //habilita display intermediário menos significativo
+        f_dezena = 0;
+        f_unidade = 1;
+      }
+      break;
+  case 4://transmite a centena
+      if(f_centena){
+        transmissao(B10110000+centena); //habilita display intermediário mais significativo
+        f_centena = 0;
+        f_dezena = 1;
+      }
+      break;  
+  case 6://transmite o milhar e conta_display = 0;
+      if(f_milhar){
+        transmissao(B01110000+milhar); //habilita display mais significativo
+        f_milhar = 0;
+        f_centena = 1;
+      }
+      break;  
+  case 8:
+      tempo_display = 0;
+      f_milhar = 1;
+      break;    
+    default:
+       if(tempo_display > 8){
+          tempo_display = 0;
+          f_milhar = 1;
+       }
+       break; 
+  }
+}
+
+//função para transmissão via I2C
+void transmissao(byte pino){  
+  Wire.beginTransmission(32);
+  Wire.write(pino);
+  Wire.endTransmission();
+}
+
+//função para escrever no LCD
+void escreve(int modo, int vel_num){
+  lcd.clear(); //limpa a tela
+  
+  if(modo==1){
+    lcd.setCursor(3, 0); //Posiciona o cursor na coluna 3, linha 0;
+    lcd.print("VENTILADOR");
+    lcd.setCursor(3, 1); //Posiciona o cursor na coluna 3, linha 1;
+    lcd.print(vel_num);
+    lcd.print("%"); 
+  }
+
+  if(modo==2){
+    lcd.setCursor(3, 0); //Posiciona o cursor na coluna 3, linha 0;
+    lcd.print("EXAUSTOR");
+    lcd.setCursor(3, 1); //Posiciona o cursor na coluna 3, linha 1; 
+    lcd.print(vel_num);
+    lcd.print("%");
+  }
+
+  if(modo==3){
+    lcd.setCursor(3, 0); //Posiciona o cursor na coluna 3, linha 0;
+    lcd.print("PARADO");
+    lcd.setCursor(3, 1); //Posiciona o cursor na coluna 3, linha 1;
+    lcd.print(vel_num);
+    lcd.print("%");
+  }
+}
