@@ -1,0 +1,75 @@
+#include <Wire.h>
+
+byte val = 0;
+
+//declarando funcoes
+void WriteEEProm(byte address);
+int ReadEEProm();
+
+void setup()
+{
+  Wire.begin(); // join i2c bus
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
+                              // device address is specified in datasheet
+  Wire.write(0x00);             // sends value byte  
+  Wire.write(0x11);
+  Wire.endTransmission();
+  delay(500);
+
+ Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
+                              // device address is specified in datasheet
+  Wire.write(0x00);     
+  Wire.endTransmission();
+  val = Wire.requestFrom(0x50,1,true);
+  
+  Serial.println(val);
+  while(Wire.available())    // slave may send less than requested
+  {
+    byte c = Wire.read();    // receive a byte as character
+    Serial.println(c, HEX);         // print the character
+  }
+
+  delay(500);
+}
+
+WriteEEProm(int address, byte data){
+
+  
+  Wire.beginTransmission(address >> 8); // transmit to device #44 (0x2c)
+                              // device address is specified in datasheet
+  Wire.write(0x00);             // sends value byte  
+  Wire.write(0x11);
+  Wire.endTransmission();
+  delay(500);
+
+
+}
+
+
+
+ReadEEProm(int address){
+
+  Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
+                              // device address is specified in datasheet
+  Wire.write(0x00);     
+  Wire.endTransmission();
+  val = Wire.requestFrom(0x50,1,true);
+  
+  Serial.println(val);
+  while(Wire.available())    // slave may send less than requested
+  {
+    byte c = Wire.read();    // receive a byte as character
+    Serial.println(c, HEX);         // print the character
+  }
+
+  delay(500);
+
+  
+
+}
+
