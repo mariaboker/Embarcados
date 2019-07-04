@@ -1,75 +1,279 @@
-#include <Wire.h>
+/*
+/      EA076 - RELATÓRIO 3 - GRAVADOR DE DADOS AMBIENTAIS
+/           Esteffany Menezes         Henrique Campioto             
+/              RA 138300                 RA 122932
+/
+/
+/  Descrição: 
+/             
+/             
+/
+/
+*/
 
-byte val = 0;
+#include <string.h>
+#include <Wire.h>   // para I2C
+#include <LiquidCrystal.h>
 
-//declarando funcoes
-void WriteEEProm(byte address);
-int ReadEEProm();
+int displays_address = 32;
+int level = 0;
+bool output_disp = false;
 
+int memory_position = 0;
+byte current_memory_address = 0x01010000; // Endereço da memoria da ultima posição apontada
+byte LSB_adress = 0x00000000; // Ultima posição apontada
+bool mem_talk_on = false;
+
+float temperatura = 0;
+int temp_timer = 0;
+int sensor =  0; // Porta A/D do sensor de temperatura  /////////////////////////////////////////////// TODO //////
+
+bool colect = false 
+  
+  
 void setup()
 {
-  Wire.begin(); // join i2c bus
+  /* Configura Serial */
   Serial.begin(9600);
+  Serial.println("Inicio da rotina de inicialização");
+  
+  /* Configura Portas */
+  analogReference(INTERNAL);
+  
+  /* Configura IC2 */
+  Wire.begin();
+  Wire.beginTransmission(receiver_address);
+  Wire.write(0b11110000);                                                  //Zera displays                                                                                                                      c
+  Wire.endTransmission(receiver_address);
+ 
+  /* Configura interrupções */
+  cli();                                                            // Desabilita interrupcoes globais
+  configuracao_Timer0();
+  sei();                                                            // Habilita interrupcoes globais
+ 
+  /* Inicializa Memoria */
+  read_last_address()
+  
+  /* Inicializa LCD */
+  // Corrigir outputs do LCD ////////////////////////////////////////////////////////////////////////// TODO //////////
+  lcd.begin(16, 2);
+  lcd.clear();                                                            //Apaga o buffer e o display
+  lcd.setCursor(0,0);                                                     //Seta a posição do cursor
+  lcd.print("PARADO");
+  lcd.setCursor(0,1);
+  lcd.print("DC 000%");
+  lcd.display();
+  Serial.println("Fim da rotina de inicialização");
 }
 
-void loop()
-{
-  Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
-                              // device address is specified in datasheet
-  Wire.write(0x00);             // sends value byte  
-  Wire.write(0x11);
-  Wire.endTransmission();
-  delay(500);
+/* --------------------------------------------- INTERRUPÇÃO -----------------------------------------------------*/
+void configuracao_Timer0(){
+  // Configuracao Temporizador 0 para interrupcoes periodicas de 2ms no modo CTC
+  TCCR0A = 0x02; 
+  OCR0A = 124;   
+  TIMSK0 = 0x02; 
+  TCCR0B = 0x04;  
+}
 
- Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
-                              // device address is specified in datasheet
-  Wire.write(0x00);     
-  Wire.endTransmission();
-  val = Wire.requestFrom(0x50,1,true);
-  
-  Serial.println(val);
-  while(Wire.available())    // slave may send less than requested
-  {
-    byte c = Wire.read();    // receive a byte as character
-    Serial.println(c, HEX);         // print the character
+ISR(TIMER0_COMPA_vect){
+  // Rotina de servico de interrupcao por tempo
+  temp_timer++;
+  level++;
+  output_disp = true;
+}
+
+/* --------------------------------------------- DISPLAY ---------------------------------------------------------*/
+byte map_displays(int value){
+  switch (value) {              //Input necessário para o Decoder dado o número esperado no display
+      case 9: return(0b1001);                                  
+      case 8: return(0b1000);
+      case 7: return(0b0111);
+      case 6: return(0b0110);
+      case 5: return(0b0101);
+      case 4: return(0b0100);
+      case 3: return(0b0011);
+      case 2: return(0b0010);
+      case 1: return(0b0001);
+      default: return(0b0000);
   }
-
-  delay(500);
+} 
+ 
+void output_Displays(){
+  //level representa a casa do digito a ser escrito: unidade = 0;dezena = 1, centena = 2 e milhar = 3;
+  // P7 P6 P5 P4 P3 P2 P1 P0 - A1 A2 A3 A4 mil cent dez unid  
+  if(level>3){level=0;}
+  byte digit = 0;
+ 
+  if(level == 0){ digit = ((map_displays(temperatura % 10)<<4) + 0b0001);}
+  if(level == 1){ digit = ((map_displays((temperatura / 10) % 10)<<4) + 0b0010);}
+  if(level == 2){ digit = ((map_displays((temperatura / 100) % 10)<<4) + 0b0100);}
+  if(level == 3){ digit = ((map_displays((temperatura / 1000) % 10)<<4) + 0b1000);}
+ 
+  Wire.beginTransmission(displays_address);
+  Wire.write(digit);                               // envia um byte contendo o estado do display
+  Wire.endTransmission(displays_address);          // encerra a transmissao
+ 
+  output_disp = false;
 }
 
-WriteEEProm(int address, byte data){
 
+
+/*  --------------------------------------------- MEMÓRIA ------------------------------------------------------ */
+void begin_comunication(mem_pos){
   
-  Wire.beginTransmission(address >> 8); // transmit to device #44 (0x2c)
-                              // device address is specified in datasheet
-  Wire.write(0x00);             // sends value byte  
-  Wire.write(0x11);
-  Wire.endTransmission();
-  delay(500);
+  byte MSB_adress = mem_pos>>8 ;
+  LSB_adress = mem_pos ;
+  current_memory_address = 0x01010 + MSB_adress;
+  wire.beginTransmission(current_memory_address);  
+  wire.write(LSB_adress);
+  mem_talk_on = true;
+  return;
+  
+}
+
+int read_memory(n){
+  
+  //inicia comunicação escrevendo endereço da memoria a ser acessado
+  begin_comunication((read_last_address() + 1));
+  wire.endTransmission(current_memory_address);
+  
+  
+  wire.requestFrom(current_memory_address,n); //2n?
+  wire.read();
+  //que faz depois disso??? //////////////////////////////////////////////////////////////////////////// TODO //////
+  
+  mem_talk_on = false;
+  Serial.println("Fim da rotina de inicialização");
+}
 
 
+int read_last_address(){
+	//O sistema usa os bytes x[2046] (MSB) e x[2047] (LSB) para armazenar o número de registros existentes
+	read_memory(2046,2);
+}
+
+void write_memory(message){
+  begin_comunication(read_last_address() + 1);
+  
+  // separar em mensagem em blocos de 8b ////////////////////////////////////////////////////////////// TODO ///////
+  for message_byte in message:
+  	wire.write(message_byte);
+  	current_memory_address +=1 ;
+  
+  wire.endTransmission(current_memory_address);    
+  mem_talk_on = false;
+  
+}
+
+void reset_memory(){
+  //Para reiniciar o sistema escreva o valor 0 (zero) nas posições x[2046] (MSB) e x[2047] (LSB)
+  begin_comunication(2046);
+  wire.write(0x00000000);
+  wire.write(0x00000000);
+  wire.endTransmission(current_memory_address);
+}
+
+
+/* ------------------------------------------- TECLADO MATRICIAL ------------------------------------------------*/
+if(command = 1){ reset_memory();}
+
+else if(command = 2){ 
+  
+  int used_space = read_last_address();
+  lcd.setCursor(0,0);
+  lcd.print(String(used_space));
+  lcd.setCursor(5,0); 
+  lcd.print("DADOS GRAVADOS");
+  lcd.setCursor(0,1);
+  lcd.print(String(1022 - used_space));
+  lcd.setCursor(0,1);
+  lcd.print("DADOS GRAVADOS:");
+  lcd.display();
+  
+}
+else if(command = 3){ colect=true;}
+
+else if(command = 4){ colect=false;}
+
+else if(command = 5){
+  int used_space = read_last_address();
+  lcd.clear;
+  lcd.setCursor(0,0);
+  lcd.print(String(used_space));
+  lcd.setCursor(5,0); 
+  lcd.print("DADOS GRAVADOS");
+  lcd.setCursor(0,1);
+  lcd.print("LER QUANTOS?");
+  
+  // LER RESPOSTA NO TECLADO MATRICIAL ///////////////////////////////////////////////////////////////// TODO //////
+  read_memory(n);
+}
+else {}
+
+/* ----------------------------------------- SENSOR DE TEMPERATURA ----------------------------------------------*/
+int read_Temp(){
+	return analogRead(sensor)
 }
 
 
 
-ReadEEProm(int address){
-
-  Wire.beginTransmission(0x50); // transmit to device #44 (0x2c)
-                              // device address is specified in datasheet
-  Wire.write(0x00);     
-  Wire.endTransmission();
-  val = Wire.requestFrom(0x50,1,true);
-  
-  Serial.println(val);
-  while(Wire.available())    // slave may send less than requested
-  {
-    byte c = Wire.read();    // receive a byte as character
-    Serial.println(c, HEX);         // print the character
+void loop(){
+  if(temp_timer>1000 and colect){
+  	temperatura = read_Temp();
+    write_memory(temperatura);
+    temp_timer=0;
   }
-
-  delay(500);
-
+  if(output_disp){ output_Displays();}
   
-
+  // VARREDURA TECLADO MATRICIAL ////////////////////////////////////////////////////////////////////// TODO ///////
 }
 
+
+/* TECLADO MATRICIAL:
+Rotina de varredura ; 
+Requer debouncer (pode usar delay)
+Todos os comandos terminam com #
+	
+1# :  Reset - Apaga toda a memória, com aviso no display (zera o contador de medidas armazenadas)
+2# :  Status - Mostra no display o número de dados gravados e o número de medições disponíveis
+3# :  Inicia coleta periódica - Mostra mensagem no display
+4# :  Finaliza coleta periódica - Mostra mensagem no display
+5# : Transferência de dados - Envia pela porta serial os dados coletados, mostra mensagem no display.
+
+obs: Após o comando "5#”, deve aparecer no display uma mensagem solicitando o número de medidas a serem transferidas.
+	O usuário deve digitar um valor entre 1 e 1022 e pressionar “#” para confirmar ou “*” para cancelar. 
+    As medidas transferidas podem ser visualizadas através do monitor serial.
+  
+*/
+
+
+/* COMUNICAÇÃO I2C COM MEMORIA: 
+Memória tem endereço fixo = 0x1010; Uma posição dentro da memória é dada por um endereço de 11bits
+A comunicação I2C envia 7b de endereço, seguidos por 8b de dados. 
+Para a comunicação da memória o fabricante definiu que os 3 bist menos significativos do endereço I2C seriam usados para identificar 
+a posição acessada na memória. 
+
+[ ENDEREÇO I2C (7b) ] [ DADO (8b) ][ DADO (8b) ][ DADO (8b)] => [ 1010 A10 A9 A8 ][ A7 A6 A5 A4 A3 A2 A1 A0 ][[ TEMPERATURA (16b) ]]
+
+As sequencias seguintes são conjuntos de dados, sendo que cada temperatura sera armazenada em 2bytes */
+
+/* ESTRUTURA DE DADOS:
+Ultimos bytes da memoria armazenam o número de registros existentes (x[2046]x[2047]) sendo cada registro composto por 2bytes.
+Para resetar a memória basta  escrever 0 nessas posições.
+Ao receber uma instrução de escrever, o sistema grava a partir do endereço 2 * {(256 * x[2046]) + x[2047]} da memória. Após,
+incrementa x[2047], caso haja overflow incrementa x[2046].
+*/
+
+
+/* CAPTURA DE DADOS
+Resolução de décimo de grau, adquirida através de sensor de temperatura analógico LM35 a cada 2s
+(http://www.ti.com/lit/ds/symlink/lm35.pdf). 
+*/
+
+/* COMUNICAÇÃO COM USUARIO
+LCD - Respostas aos acionamentos por teclado
+Display 7segmentos - ultima temperatura
+Teclado Matricial - Inputs do usuario
+*/
+
+/*EXPERIMENTO 2 _ CODIGO : https://pastebin.com/wCK5kBQE
