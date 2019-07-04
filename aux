@@ -1,19 +1,14 @@
 /*
-/      EA076 - RELATÓRIO 3 - GRAVADOR DE DADOS AMBIENTAIS
-/           Esteffany Menezes         Henrique Campioto             
-/              RA 138300                 RA 122932
-/
-/
-/  Descrição: 
-/             
-/             
-/
+/      EA076 - RELATÓRIO 3 - GRAVADOR DE DADOS AMBIENTAIS  
 /
 */
-
 #include <string.h>
 #include <Wire.h>   // para I2C
 #include <LiquidCrystal.h>
+
+
+
+LiquidCrystal lcd(12, 13, 4, 5, 6, 7);
 
 int displays_address = 32;
 int level = 0;
@@ -28,8 +23,8 @@ float temperatura = 0;
 int temp_timer = 0;
 int sensor =  0; // Porta A/D do sensor de temperatura  /////////////////////////////////////////////// TODO //////
 
-bool colect = false 
-  
+bool colect = false;
+int receiver_address =0;
   
 void setup()
 {
@@ -52,7 +47,7 @@ void setup()
   sei();                                                            // Habilita interrupcoes globais
  
   /* Inicializa Memoria */
-  read_last_address()
+  read_last_address();
   
   /* Inicializa LCD */
   // Corrigir outputs do LCD ////////////////////////////////////////////////////////////////////////// TODO //////////
@@ -104,7 +99,7 @@ void output_Displays(){
   if(level>3){level=0;}
   byte digit = 0;
  
-  if(level == 0){ digit = ((map_displays(temperatura % 10)<<4) + 0b0001);}
+  if(level == 0) digit = ((map_displays(temperatura % 10)<<4) + 0b0001);
   if(level == 1){ digit = ((map_displays((temperatura / 10) % 10)<<4) + 0b0010);}
   if(level == 2){ digit = ((map_displays((temperatura / 100) % 10)<<4) + 0b0100);}
   if(level == 3){ digit = ((map_displays((temperatura / 1000) % 10)<<4) + 0b1000);}
@@ -119,7 +114,7 @@ void output_Displays(){
 
 
 /*  --------------------------------------------- MEMÓRIA ------------------------------------------------------ */
-void begin_comunication(mem_pos){
+void begin_comunication(int mem_pos){
   
   byte MSB_adress = mem_pos>>8 ;
   LSB_adress = mem_pos ;
@@ -127,11 +122,9 @@ void begin_comunication(mem_pos){
   wire.beginTransmission(current_memory_address);  
   wire.write(LSB_adress);
   mem_talk_on = true;
-  return;
-  
 }
 
-int read_memory(n){
+int read_memory(int n){
   
   //inicia comunicação escrevendo endereço da memoria a ser acessado
   begin_comunication((read_last_address() + 1));
@@ -148,17 +141,17 @@ int read_memory(n){
 
 
 int read_last_address(){
-	//O sistema usa os bytes x[2046] (MSB) e x[2047] (LSB) para armazenar o número de registros existentes
-	read_memory(2046,2);
+  //O sistema usa os bytes x[2046] (MSB) e x[2047] (LSB) para armazenar o número de registros existentes
+  read_memory(2046,2);
 }
 
-void write_memory(message){
+void write_memory(int message){
   begin_comunication(read_last_address() + 1);
   
   // separar em mensagem em blocos de 8b ////////////////////////////////////////////////////////////// TODO ///////
   for message_byte in message:
-  	wire.write(message_byte);
-  	current_memory_address +=1 ;
+    wire.write(message_byte);
+    current_memory_address +=1 ;
   
   wire.endTransmission(current_memory_address);    
   mem_talk_on = false;
@@ -212,14 +205,14 @@ else {}
 
 /* ----------------------------------------- SENSOR DE TEMPERATURA ----------------------------------------------*/
 int read_Temp(){
-	return analogRead(sensor)
+  return analogRead(sensor)
 }
 
 
 
 void loop(){
   if(temp_timer>1000 and colect){
-  	temperatura = read_Temp();
+    temperatura = read_Temp();
     write_memory(temperatura);
     temp_timer=0;
   }
@@ -233,7 +226,7 @@ void loop(){
 Rotina de varredura ; 
 Requer debouncer (pode usar delay)
 Todos os comandos terminam com #
-	
+  
 1# :  Reset - Apaga toda a memória, com aviso no display (zera o contador de medidas armazenadas)
 2# :  Status - Mostra no display o número de dados gravados e o número de medições disponíveis
 3# :  Inicia coleta periódica - Mostra mensagem no display
@@ -241,7 +234,7 @@ Todos os comandos terminam com #
 5# : Transferência de dados - Envia pela porta serial os dados coletados, mostra mensagem no display.
 
 obs: Após o comando "5#”, deve aparecer no display uma mensagem solicitando o número de medidas a serem transferidas.
-	O usuário deve digitar um valor entre 1 e 1022 e pressionar “#” para confirmar ou “*” para cancelar. 
+  O usuário deve digitar um valor entre 1 e 1022 e pressionar “#” para confirmar ou “*” para cancelar. 
     As medidas transferidas podem ser visualizadas através do monitor serial.
   
 */
@@ -275,5 +268,3 @@ LCD - Respostas aos acionamentos por teclado
 Display 7segmentos - ultima temperatura
 Teclado Matricial - Inputs do usuario
 */
-
-/*EXPERIMENTO 2 _ CODIGO : https://pastebin.com/wCK5kBQE
