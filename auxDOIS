@@ -80,9 +80,10 @@ int freeSpace = 1022;
 int transfere = 0;
 
 int countaux = 0;
-int temperatur = 0;
+double temperatur = 0;
 byte msb = 0;
 byte lsb = 0;
+int valorTotal=0;
 
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
@@ -322,6 +323,7 @@ void executeCommand() {
 
       if (salvaTemp == 1) {
         temperatur = getTmedido()*10;
+        Serial.println(temperatur);
         crackValue(temperatur);
         writeMemo(countPosition,msb,lsb);
         crackValue(countMed);
@@ -585,13 +587,15 @@ void writeMemo(int position, int valor1, int valor2){
     Wire.beginTransmission(80);
     Wire.write(position);
     Wire.write(valor1); // data
+    delay(10);
     Wire.endTransmission(80);
-    delay(5);
+    delay(10);
     Wire.beginTransmission(80);
     Wire.write(position+1);
     Wire.write(valor2); // data
+    delay(10);
     Wire.endTransmission(80);
-    delay(5);
+    delay(10);
     countMed++;
     countPosition = countPosition+2;
   } else if (position >= 256 && position < 511){
@@ -838,13 +842,26 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    Serial.println(n);
-    Serial.println(a);
-    Serial.println(b);
+    //Serial.println(n);
+    //Serial.println(a);
+    //Serial.println(b);
+    valorTotal = recoverValue(a,b);
+    Serial.println(valorTotal);
   }
+
 }
 
 void crackValue(int valor){
+  Serial.println(valor);
   msb = valor/256;
+  Serial.println(msb);
   lsb = valor%256;
+  Serial.println(lsb);
+}
+
+int recoverValue(int valor1, int valor2){
+  int total;
+  total = valor1*256+valor2;
+  return total;
+
 }
