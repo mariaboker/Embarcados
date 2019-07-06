@@ -79,6 +79,11 @@ int statuss = 0;
 int freeSpace = 1022;
 int transfere = 0;
 
+int countaux = 0;
+int temperatur = 0;
+byte msb = 0;
+byte lsb = 0;
+
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
 void configuracao_Timer0() {
@@ -100,7 +105,7 @@ ISR(TIMER0_COMPA_vect) {
   //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
   if (inicia == 1) {
     timeBase++;
-    if (timeBase > 1000) {  // base de tempo de 2s
+    if (timeBase > 100) {  // base de tempo de 2s
     timeBase = 0;
     salvaTemp = 1;          // flag para salvar temperatura na memoria
    }
@@ -303,9 +308,10 @@ double getTmedido() {               //get temp sensor
 void executeCommand() {
   // se comando foi reset apaga toda a memoria e recomeca
   if (reset == 1) {
-
+    writeMemo (2046,0,0);
     // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
     countMed = 0;   // reseta contador de espacos ocupados
+    countPosition = 0;
     reset = 0;      // reseta flag para um proximo reset
     inicia = 0;     // desliga coleta de dados
     //salvaTemp = 0;
@@ -315,8 +321,13 @@ void executeCommand() {
     if (inicia == 1 && finaliza !=1){
 
       if (salvaTemp == 1) {
+        temperatur = getTmedido()*10;
+        crackValue(temperatur);
+        writeMemo(countPosition,msb,lsb);
+        crackValue(countMed);
+        writeMemo(2046,msb,lsb);
         // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
-        countMed++;       // incrementa espaco ocupado
+        //countMed++;       // incrementa espaco ocupado
         freeSpace = 1022 - countMed;
         salvaTemp = 0;    // reseta flag para proximo dado
       }
@@ -341,10 +352,11 @@ void executeCommand() {
 
     // se comando foi transfere, transfere dados para monitor serial
     if (transfere == 1 ) {
+      readMemo(countPosition,(2*valor));
     // AQUI DEVE TER O CODIGO PARA TRANSFERIR
-    transfere = 0;        // reset flag
-    lcd.clear();
-    lcd.print("transferiu");         //DEBUG
+      transfere = 0;        // reset flag
+      lcd.clear();
+      lcd.print("transferiu");         //DEBUG
     }
 }
 
@@ -584,12 +596,12 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 256 && position < 511){
     Wire.beginTransmission(81);
-    Wire.write(position+256);
+    Wire.write(position-256);
     Wire.write(valor1); // data
     Wire.endTransmission(81);
     delay(5);
     Wire.beginTransmission(81);
-    Wire.write(position+1+256);
+    Wire.write(position+1-256);
     Wire.write(valor2); // data
     Wire.endTransmission(81);
     delay(5);
@@ -597,12 +609,12 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 512 && position < 767){
     Wire.beginTransmission(82);
-    Wire.write(position+512);
+    Wire.write(position-512);
     Wire.write(valor1); // data
     Wire.endTransmission(82);
     delay(5);
     Wire.beginTransmission(82);
-    Wire.write(position+1+512);
+    Wire.write(position+1-512);
     Wire.write(valor2); // data
     Wire.endTransmission(82);
     delay(5);
@@ -610,12 +622,12 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 768 && position < 1023){
     Wire.beginTransmission(83);
-    Wire.write(position+768);
+    Wire.write(position-768);
     Wire.write(valor1); // data
     Wire.endTransmission(83);
     delay(5);
     Wire.beginTransmission(83);
-    Wire.write(position+1+768);
+    Wire.write(position+1-768);
     Wire.write(valor2); // data
     Wire.endTransmission(83);
     delay(5);
@@ -623,12 +635,12 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 1024 && position < 1279){
     Wire.beginTransmission(84);
-    Wire.write(position+1024);
+    Wire.write(position-1024);
     Wire.write(valor1); // data
     Wire.endTransmission(84);
     delay(5);
     Wire.beginTransmission(84);
-    Wire.write(position+1+1024);
+    Wire.write(position+1-1024);
     Wire.write(valor2); // data
     Wire.endTransmission(84);
     delay(5);
@@ -636,12 +648,12 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 1280 && position < 1535){
     Wire.beginTransmission(85);
-    Wire.write(position+1280);
+    Wire.write(position-1280);
     Wire.write(valor1); // data
     Wire.endTransmission(85);
     delay(5);
     Wire.beginTransmission(85);
-    Wire.write(position+1+1280);
+    Wire.write(position+1-1280);
     Wire.write(valor2); // data
     Wire.endTransmission(85);
     delay(5);
@@ -649,49 +661,67 @@ void writeMemo(int position, int valor1, int valor2){
     countPosition = countPosition+2;
   } else if (position >= 1536 && position < 1791){
     Wire.beginTransmission(86);
-    Wire.write(position+1536);
+    Wire.write(position-1536);
     Wire.write(valor1); // data
     Wire.endTransmission(86);
     delay(5);
     Wire.beginTransmission(86);
-    Wire.write(position+1+1536);
+    Wire.write(position+1-1536);
     Wire.write(valor2); // data
     Wire.endTransmission(86);
     delay(5);
     countMed++;
     countPosition = countPosition+2;
-  } else if (position >= 1792 && position < 2047){
+  } else if (position >= 1792 && position < 2045){
     Wire.beginTransmission(87);
-    Wire.write(position+1792);
+    Wire.write(position-1792);
     Wire.write(valor1); // data
     Wire.endTransmission(87);
     delay(5);
     Wire.beginTransmission(87);
-    Wire.write(position+1+1792);
+    Wire.write(position+1-1792);
     Wire.write(valor2); // data
     Wire.endTransmission(87);
     delay(5);
     countMed++;
     countPosition = countPosition+2;
+  } else if (position == 2046){
+    Wire.beginTransmission(87);
+    Wire.write(position-1792);
+    Wire.write(valor1); // data
+    Wire.endTransmission(87);
+    delay(5);
+    Wire.beginTransmission(87);
+    Wire.write(position+1-1792);
+    Wire.write(valor2); // data
+    Wire.endTransmission(87);
+    delay(5);
   }
+  Serial.print("valor1: ");
+  Serial.println(valor1);
+  Serial.print("valor2: ");
+  Serial.println(valor2);
 }
 
 //le de uma posição, uma quantidade n de valores (n = 2*posiçoes)
 void readMemo(int position, int quantidad){
   int n = quantidad;
+  byte a;
+  byte b;
   int contaux = position;
+  while (n != 0){
     if (contaux >=0 && contaux < 255){
       Wire.beginTransmission(80); // endereco de memoria
       Wire.write(position-2);
       Wire.endTransmission(80);
       Wire.requestFrom(80,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(80); // endereco de memoria
       Wire.write(position-1);
       Wire.endTransmission(80);
       Wire.requestFrom(80,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -701,13 +731,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-256);
       Wire.endTransmission(81);
       Wire.requestFrom(81,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(81); // endereco de memoria
       Wire.write(position-1-256);
       Wire.endTransmission(81);
       Wire.requestFrom(81,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -717,13 +747,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-512);
       Wire.endTransmission(82);
       Wire.requestFrom(82,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(82); // endereco de memoria
       Wire.write(position-1-512);
       Wire.endTransmission(82);
       Wire.requestFrom(82,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -733,13 +763,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-768);
       Wire.endTransmission(83);
       Wire.requestFrom(83,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(83); // endereco de memoria
       Wire.write(position-1-768);
       Wire.endTransmission(83);
       Wire.requestFrom(83,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -749,13 +779,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-1024);
       Wire.endTransmission(84);
       Wire.requestFrom(84,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(84); // endereco de memoria
       Wire.write(position-1-1024);
       Wire.endTransmission(84);
       Wire.requestFrom(84,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -765,13 +795,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-1280);
       Wire.endTransmission(85);
       Wire.requestFrom(85,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(85); // endereco de memoria
       Wire.write(position-1-1280);
       Wire.endTransmission(85);
       Wire.requestFrom(85,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -781,13 +811,13 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-1536);
       Wire.endTransmission(86);
       Wire.requestFrom(86,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(86); // endereco de memoria
       Wire.write(position-1-1536);
       Wire.endTransmission(86);
       Wire.requestFrom(86,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
@@ -797,15 +827,24 @@ void readMemo(int position, int quantidad){
       Wire.write(position-2-1792);
       Wire.endTransmission(87);
       Wire.requestFrom(87,1);
-      byte a = Wire.read();
+      a = Wire.read();
       delay(5);
       Wire.beginTransmission(87); // endereco de memoria
       Wire.write(position-1-1792);
       Wire.endTransmission(87);
       Wire.requestFrom(87,1);
-      byte b = Wire.read();
+      b = Wire.read();
       delay(5);
       countaux = countaux - 2;
       n--;
     }
+    Serial.println(n);
+    Serial.println(a);
+    Serial.println(b);
+  }
+}
+
+void crackValue(int valor){
+  msb = valor/256;
+  lsb = valor%256;
 }
