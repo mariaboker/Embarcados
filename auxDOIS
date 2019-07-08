@@ -83,7 +83,7 @@ int countaux = 0;
 double temperatur = 0;
 byte msb = 0;
 byte lsb = 0;
-int valorTotal=0;
+double valorTotal=0;
 
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
@@ -354,7 +354,7 @@ void executeCommand() {
 
     // se comando foi transfere, transfere dados para monitor serial
     if (transfere == 1 ) {
-      readMemo(countPosition,(2*valor));
+      readMemo(countPosition,valor);
     // AQUI DEVE TER O CODIGO PARA TRANSFERIR
       transfere = 0;        // reset flag
       lcd.clear();
@@ -587,15 +587,15 @@ void writeMemo(int position, int valor1, int valor2){
     Wire.beginTransmission(80);
     Wire.write(position);
     Wire.write(valor1); // data
-    delay(10);
+    //delay(10);
     Wire.endTransmission(80);
-    delay(10);
+    delay(5);
     Wire.beginTransmission(80);
     Wire.write(position+1);
     Wire.write(valor2); // data
-    delay(10);
+    //delay(10);
     Wire.endTransmission(80);
-    delay(10);
+    delay(5);
     countMed++;
     countPosition = countPosition+2;
   } else if (position >= 256 && position < 511){
@@ -713,7 +713,7 @@ void readMemo(int position, int quantidad){
   byte a;
   byte b;
   int contaux = position;
-  while (n != 0){
+  while (n > 0){
     if (contaux >=0 && contaux < 255){
       Wire.beginTransmission(80); // endereco de memoria
       Wire.write(position-2);
@@ -730,7 +730,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     } 
-    if (contaux >= 256 && contaux < 511){
+    else if (contaux >= 256 && contaux < 511){
       Wire.beginTransmission(81); // endereco de memoria
       Wire.write(position-2-256);
       Wire.endTransmission(81);
@@ -746,7 +746,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 512 && contaux < 767){
+    else if (contaux >= 512 && contaux < 767){
       Wire.beginTransmission(82); // endereco de memoria
       Wire.write(position-2-512);
       Wire.endTransmission(82);
@@ -762,7 +762,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 768 && contaux < 1023){
+    else if (contaux >= 768 && contaux < 1023){
       Wire.beginTransmission(83); // endereco de memoria
       Wire.write(position-2-768);
       Wire.endTransmission(83);
@@ -778,7 +778,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 1024 && contaux < 1279){
+    else if (contaux >= 1024 && contaux < 1279){
       Wire.beginTransmission(84); // endereco de memoria
       Wire.write(position-2-1024);
       Wire.endTransmission(84);
@@ -794,7 +794,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 1280 && contaux < 1535){
+    else if (contaux >= 1280 && contaux < 1535){
       Wire.beginTransmission(85); // endereco de memoria
       Wire.write(position-2-1280);
       Wire.endTransmission(85);
@@ -810,7 +810,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 1536 && contaux < 1791){
+    else if (contaux >= 1536 && contaux < 1791){
       Wire.beginTransmission(86); // endereco de memoria
       Wire.write(position-2-1536);
       Wire.endTransmission(86);
@@ -826,7 +826,7 @@ void readMemo(int position, int quantidad){
       countaux = countaux - 2;
       n--;
     }
-    if (contaux >= 1792 && contaux < 2047){
+    else if (contaux >= 1792 && contaux < 2047){
       Wire.beginTransmission(87); // endereco de memoria
       Wire.write(position-2-1792);
       Wire.endTransmission(87);
@@ -846,6 +846,7 @@ void readMemo(int position, int quantidad){
     //Serial.println(a);
     //Serial.println(b);
     valorTotal = recoverValue(a,b);
+    Serial.print("lido: ");
     Serial.println(valorTotal);
   }
 
@@ -859,8 +860,8 @@ void crackValue(int valor){
   Serial.println(lsb);
 }
 
-int recoverValue(int valor1, int valor2){
-  int total;
+double recoverValue(int valor1, int valor2){
+  double total;
   total = valor1*256+valor2;
   return total;
 
