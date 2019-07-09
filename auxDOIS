@@ -95,7 +95,7 @@ void configuracao_Timer0() {
 }
 
 // interrupcao chamada a cada 2ms
-ISR(int TIMER0_COMPA_vect) {
+ISR(TIMER0_COMPA_vect) {
 
   // alterna entre displays (0, 1, 2, 3)
   aux++;
@@ -214,7 +214,7 @@ void scanKeypad() {
     apertou = 0;
     aux2=0;
     pressed=0;
-    colunalido=0;
+    colunalido==0;
 
     //Verifica qual tecla foi apertada
     if (mapline == 1) {
@@ -529,6 +529,57 @@ void scanCommand() {
 
 
 
+void setup(){
+//init serial e displays 7 seg
+Serial.begin(9600);       // taxa de transmissao serial
+Wire.begin();
+Wire.setClock(400000);    // standard value is 100000
+Wire.beginTransmission(63);
+Wire.write(240);          //Desliga displays (b11110000)
+Wire.endTransmission(63);
+
+analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
+
+init_lcd();           // inicia lcd
+
+cli();                // Desabilita interrupções globais
+configuracao_Timer0();
+sei();                // Habilita interrupcoes globais
+
+//teclado matricial
+pinMode(3, INPUT);  //coluna 1
+pinMode(2, INPUT);  //coluna 2
+pinMode(15, INPUT); //coluna 3
+pinMode(11, OUTPUT);  //linha 1
+pinMode(10, OUTPUT);  //linha 2
+pinMode(9, OUTPUT); //linha 3
+pinMode(8, OUTPUT); //linha 4
+digitalWrite (11,HIGH);
+digitalWrite (10,HIGH);
+digitalWrite (9,HIGH);
+digitalWrite (8,HIGH);
+
+}
+
+
+void loop(){
+
+  scanCommand();
+  executeCommand();
+
+  if (inicia == 1){    //display temperatura a cada 2s
+    x=getTmedido()*100;
+    uni = x % 10;
+    y = x / 10;
+    dez = y % 10;
+    z = y / 10;
+    cent = z % 10;
+    w = z / 10;
+    mil = w % 10;
+  }
+  displayMode(uni,dez,cent,mil);
+}
+
 
 //escreve numa posição, msb e lsb valores
 void writeMemo(int position, int valor1, int valor2){
@@ -676,7 +727,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(80,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     } 
     else if (contaux >= 256 && contaux < 511){
@@ -692,7 +743,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(81,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 512 && contaux < 767){
@@ -708,7 +759,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(82,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 768 && contaux < 1023){
@@ -724,7 +775,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(83,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 1024 && contaux < 1279){
@@ -740,7 +791,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(84,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 1280 && contaux < 1535){
@@ -756,7 +807,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(85,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 1536 && contaux < 1791){
@@ -772,7 +823,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(86,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     else if (contaux >= 1792 && contaux < 2047){
@@ -788,7 +839,7 @@ void readMemo(int position, int quantidad){
       Wire.requestFrom(87,1);
       b = Wire.read();
       delay(5);
-      countaux = countaux - 2;
+      position = position - 2;
       n--;
     }
     //Serial.println(n);
@@ -815,57 +866,3 @@ double recoverValue(int valor1, int valor2){
   return total;
 
 }
-
-
-
-void setup(){
-//init serial e displays 7 seg
-Serial.begin(9600);       // taxa de transmissao serial
-Wire.begin();
-Wire.setClock(400000);    // standard value is 100000
-Wire.beginTransmission(63);
-Wire.write(240);          //Desliga displays (b11110000)
-Wire.endTransmission(63);
-
-//analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
-
-init_lcd();           // inicia lcd
-
-cli();                // Desabilita interrupções globais
-configuracao_Timer0();
-sei();                // Habilita interrupcoes globais
-
-//teclado matricial
-pinMode(3, INPUT);  //coluna 1
-pinMode(2, INPUT);  //coluna 2
-pinMode(15, INPUT); //coluna 3
-pinMode(11, OUTPUT);  //linha 1
-pinMode(10, OUTPUT);  //linha 2
-pinMode(9, OUTPUT); //linha 3
-pinMode(8, OUTPUT); //linha 4
-digitalWrite (11,HIGH);
-digitalWrite (10,HIGH);
-digitalWrite (9,HIGH);
-digitalWrite (8,HIGH);
-
-}
-
-
-void loop(){
-
-  scanCommand();
-  executeCommand();
-
-  if (inicia == 1){    //display temperatura a cada 2s
-    x=getTmedido()*100;
-    uni = x % 10;
-    y = x / 10;
-    dez = y % 10;
-    z = y / 10;
-    cent = z % 10;
-    w = z / 10;
-    mil = w % 10;
-  }
-  displayMode(uni,dez,cent,mil);
-}
-
