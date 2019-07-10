@@ -1,0 +1,873 @@
+/*RASCUNHO*******************************************************************************************/
+/*                                                                                      */
+/* EA 076 - Laboratório de Sistemas Embarcados                                          */
+/* Projeto 3: sadsadasd Modificar tudo                                                          */
+/*                                                                                      */
+/* Grupo: Victor Perez,148122 e Maria Kersanach, 156571                                 */
+/* Entrega em XX de Abril de 2018                                                       */
+/*
+/* Link para video: XX                                            */
+/* Link para roteiro: XX                                          */
+/*                                                                                      */
+/********************************************************************************************/
+
+
+//https://circuitdigest.com/microcontroller-projects/keypad-interfacing-with-8051-microcontroller
+/* Projeto 3: XXX         */
+/* EXPLICACAO BASICA XXX  */
+
+#include <Wire.h>   // para I2C
+#include <LiquidCrystal.h>
+
+
+LiquidCrystal lcd(12, 13, 4, 5, 6, 7);
+//RS - pino 12
+//Enable - pino 13
+//DB7 - pino 7
+//DB6 - pino 6
+//DB5 - pino 5
+//DB4 - pino 4
+
+int uni=0;
+int dez=0;
+int cent=0;
+int mil=0;
+int x = 0;
+int y = 0;
+int z = 0;
+int w = 0;
+int j=0;
+int k=0;
+int valor=0;
+int lido[5];
+int timeBase = 0; // variavel para delimitar tempo na contagem de rpm
+int pulseCount = 0; // flag que indica que a contagem de rpm deve ser realizada (baseia-se no timeBase)
+
+int aux=0;
+int pressed=0;;
+int aux2=0;
+
+char tecla;
+char comando;
+char anterior = 0;
+char atual = 0;
+char guardanum=0;
+
+int apertou=0;
+int count=0;
+
+int colunalido;
+int colunalido1;
+int colunalido2;
+int colunalido3;
+int mapcolun=0;
+int mapline=0;
+
+int analogPin = A3;
+int colun1=3;
+int colun2=2;
+int colun3=15;
+int linhas[4] = {11,10,9,8};
+
+int inicia = 0;
+int salvaTemp = 0;
+int reset = 0;
+int finaliza = 0;
+int countMed = 0;
+int countPosition = 0;
+int statuss = 0;
+int freeSpace = 1022;
+int transfere = 0;
+
+int countaux = 0;
+double temperatur = 0;
+byte msb = 0;
+byte lsb = 0;
+float valorTotal=0;
+
+
+// Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
+void configuracao_Timer0() {
+  TCCR0A = 0x02;
+  OCR0A = 124;
+  TIMSK0 = 0x02;
+  TCCR0B = 0x04;
+}
+
+// interrupcao chamada a cada 2ms
+ISR(TIMER0_COMPA_vect) {
+
+  // alterna entre displays (0, 1, 2, 3)
+  aux++;
+  if (aux > 3) {
+    aux = 0;
+  }
+
+  //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
+  if (inicia == 1) {
+    timeBase++;
+    if (timeBase > 500) {  // base de tempo de 2s
+    timeBase = 0;
+    salvaTemp = 1;          // flag para salvar temperatura na memoria
+   }
+  }
+
+  //flag para contar debouncing
+  if (apertou == 1) count++;
+}
+
+//*** MOSTRA NO 7 SEGMENTOS ***//
+// Funcao que mostra no display 7 segmentos através do I2C
+void displayMode (int a,int b,int c,int d){
+  if (aux==0) {                 //algarismo unidade
+    Wire.beginTransmission(63);
+    Wire.write(a+224);
+    Wire.endTransmission(63);
+  } else if (aux == 1) {        //algarismo dezena
+    Wire.beginTransmission(63);
+    Wire.write(b+208);
+    Wire.endTransmission(63);
+  } else if (aux == 2) {        //algarismo centena
+    Wire.beginTransmission(63);
+    Wire.write(c+176);
+    Wire.endTransmission(63);
+  } else if (aux == 3) {        //algarismo milhar
+    Wire.beginTransmission(63);
+    Wire.write(d+112);
+    Wire.endTransmission(63);
+  }
+}
+
+/***  LCD   ***/
+// Funcao que configura estado inicial do display LCD
+void init_lcd() {
+
+  lcd.begin(16, 2);
+  lcd.clear();          //Apaga o buffer e o display
+  lcd.setCursor(0,0);   //Seta a posição do cursor
+  lcd.display();
+  Serial.println("fim init lcd");
+}
+
+//*** ESCANEAR TECLADO ***//
+//Funcao que capta que tecla foi pressionada no teclado matricial
+void scanKeypad() {
+
+  // capta qualquer ruído e mapeia onde foi
+  if (aux2 == 0) {
+    for (int i = 0; i < 4; i++){      // Fase de scan
+      digitalWrite(linhas[i], LOW);   // Seta uma das linhas LOW para captar nas colunas
+      if(digitalRead(colun1)==0) {
+        //colunalido = colun1;
+        mapcolun = 1;                 // Se pegou algo mapeia coluna
+        mapline = i+1;                // e linha
+        aux2 = 1;                     // sai da fase de captar
+        apertou = 1;                  // Seta flag para debounce
+        break;
+      }
+      if(digitalRead(colun2)==0){
+        //colunalido = colun2;
+        mapcolun = 2;
+        mapline = i+1;
+        aux2 = 1;
+        apertou = 1;
+        break;
+      }
+      if(digitalRead(colun3)==0){
+        //colunalido = colun3;
+        mapcolun = 3;
+        mapline = i+1;
+        aux2 = 1;
+        apertou = 1;
+        break;
+      }
+      digitalWrite(linhas[i], HIGH);  //volta linha para HIGH para proximo scan
+    }
+  }
+
+  // espera contagem de 50ms de debouncing e verifica de novo se tecla continua pressionada
+  if (pressed==1||(count >= 25)&&((digitalRead(colun1)==0)||(digitalRead(colun2)==0)||(digitalRead(colun3)==0))){
+    count = 0;
+    pressed = 1;
+    apertou = 0;
+    //Serial.println("pressionou algo");
+
+    //seta todas as linhas LOW para captar soltura de tecla e lê de novo
+    digitalWrite(linhas[0], LOW);
+    digitalWrite(linhas[1], LOW);
+    digitalWrite(linhas[2], LOW);
+    digitalWrite(linhas[3], LOW);
+    colunalido1 = digitalRead(colun1);
+    colunalido2 = digitalRead(colun2);
+    colunalido3 = digitalRead(colun3);
+    //Serial.println("pressionou algo");
+
+    //Se soltou tecla passa para a próxima fase que verifica qual tecla foi
+    if(colunalido1==1&&colunalido2==1&&colunalido3==1){
+
+    //reseta estado padrão de scan das linhas
+    //Serial.println("soltou algo");
+    digitalWrite(linhas[0], HIGH);
+    digitalWrite(linhas[1], HIGH);
+    digitalWrite(linhas[2], HIGH);
+    digitalWrite(linhas[3], HIGH);
+    apertou = 0;
+    aux2=0;
+    pressed=0;
+    colunalido==0;
+
+    //Verifica qual tecla foi apertada
+    if (mapline == 1) {
+      if (mapcolun == 1) tecla = '1';
+      else if (mapcolun == 2) tecla = '2';
+      else if (mapcolun == 3) tecla = '3';
+
+    } else if (mapline == 2) {
+      if (mapcolun == 1) tecla = '4';
+      else if (mapcolun == 2) tecla = '5';
+      else if (mapcolun == 3) tecla = '6';
+
+    } else if (mapline == 3) {
+      if (mapcolun == 1) tecla = '7';
+      else if (mapcolun == 2) tecla = '8';
+      else if (mapcolun == 3) tecla = '9';
+
+    } else if (mapline == 4){
+      if (mapcolun == 1) tecla = '#';
+      else if (mapcolun == 2) tecla = '0';
+      else if (mapcolun == 3) tecla = '*';
+    }
+     //Serial.println(tecla);
+
+  }
+ }
+}
+
+//*** QUANTIDADE DE DADOS PARA SEREM TRANSFERIDOS PARA A MEMORIA ***//
+// Funcao que pega pelo teclado matricial valor numerico de quantidade de dados a serem transferidas na funcao 5
+void coletaNumero(){    //coleta numero de teclado para função transferee
+  valor = 0;
+  k=0;
+  j=0;
+  tecla=0;
+  do {        // enquanto nao eh o asterisco, le teclado
+  scanKeypad();
+    if(tecla != 0){
+      lido[j]=tecla-48;       //salva num vetor cada digito para ser tratado depois
+      //Serial.println(tecla); // debug
+      //Serial.println(lido[j]); // debug
+      if (tecla!='#'){
+        tecla=0;
+        j++;
+      }
+  //Serial.println("tecla: "); // debug
+    }
+  } while(tecla!='#');
+
+  if (lido[1]==-13){              //numero de 1 digito
+  valor = lido[0];
+  } else if (lido[2]==-13) {      //numero de 2 digitos
+      for(j=1;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
+      }
+  } else if (lido[3]==-13){       //numero de 3 digitos
+      for(j=2;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
+    }
+  } else if (lido[4]==-13){       //numero de 4 digitos
+      for(j=3;j>=0;j--){
+      valor = valor + lido[j]*pow(10,k);
+      k++;
+    }
+  }
+  lcd.setCursor(0,1);         //Seta a posição do cursor
+  Serial.print("cabou ja");
+}
+
+//*** INTERRUPCAO EXTERNA ***//
+void serialEvent(){
+}
+
+//*** SENSOR DE TEMPERATURA ***//
+// Funcao que pega temperatura do sensor pela entrada analogica
+double getTmedido() {               //get temp sensor
+  float temp;
+  float ldr;
+  ldr = analogRead(0);
+  temp = ldr*(1.1/1023*100);        //medindo errado tinker e certo arduino
+  //temp=((((ldr/1024)*1.1)-0.5)*100);  //medindo certo tinker e errado arduino
+  lcd.setCursor(11,2);
+  lcd.print(temp);
+
+  return temp;                        //retorna valor de temperatura para ser usada depois
+}
+
+//*** EXECUCAO DE COMANDOS LIDOS NO TECLADO ***//
+// Funcao que efetivamente executa os comandos depois de serem lidos no teclado
+void executeCommand() {
+  // se comando foi reset apaga toda a memoria e recomeca
+  if (reset == 1) {
+    writeMemo (2046,0,0);
+    // AQUI DEVE TER O CODIGO PARA APAGAR A MEMORIA;
+    countMed = 0;   // reseta contador de espacos ocupados
+    countPosition = 0;
+    reset = 0;      // reseta flag para um proximo reset
+    inicia = 0;     // desliga coleta de dados
+    //salvaTemp = 0;
+    }
+
+    // se comando foi inicializar, inicia coleta de dados
+    if (inicia == 1 && finaliza !=1){
+
+      if (salvaTemp == 1) {
+        temperatur = getTmedido()*10;
+        //Serial.println(temperatur);
+        crackValue(temperatur);
+        writeMemo(countPosition,msb,lsb);
+        crackValue(countMed);
+        writeMemo(2046,msb,lsb);
+        // AQUI DEVE TER O CODIGO DE SALVAR NA POSICAO DE MEMORIA CONFORME REQUISITOS
+        //countMed++;       // incrementa espaco ocupado
+        freeSpace = 1022 - countMed;
+        salvaTemp = 0;    // reseta flag para proximo dado
+      }
+    }
+
+    // se comando foi finalizar, finaliza coleta de dados
+/*    if (finaliza == 1) {
+      
+      inicia == 0;      // desliga coleta de dados
+      finaliza == 0;    // reseta flag para um proximo comando finaliza
+
+    }*/
+
+    // se comando foi status, mostra status no lcd
+    if (statuss == 1) {
+
+      lcd.setCursor(0,0);
+      lcd.print(countMed);    // display numero de espacos ocupados
+      lcd.setCursor(0,1);
+      lcd.print(freeSpace);   // display numero de espacos vazios
+    }
+
+    // se comando foi transfere, transfere dados para monitor serial
+    if (transfere == 1 ) {
+      readMemo(countPosition,valor);
+    // AQUI DEVE TER O CODIGO PARA TRANSFERIR
+      transfere = 0;        // reset flag
+      lcd.clear();
+      lcd.print("transferiu");         //DEBUG
+    }
+}
+
+//*** ESCANEAMENTO DE COMANDO ***//
+// Funcao que seta e confirma ou cancela comandos lidos no teclado
+void scanCommand() {
+  scanKeypad();         // verifica qual tecla
+  anterior = tecla;     // guarda valor anterior de tecla
+
+  //** COMANDO RESET
+  if (anterior == '1' || guardanum == '1'){
+    statuss=0;          // desativa status para sobreescrever
+    guardanum = '1';
+    lcd.setCursor(0,0);
+    lcd.print("reset?          ");
+    lcd.setCursor(0,1);
+    lcd.print("#-si *-no");
+    scanKeypad();
+    atual = tecla;    // escaneia tecla atual para verificar se eh # ou *
+
+    if (atual == '#'){  //confirma comando reset
+      lcd.clear();
+      lcd.print("resetando");         //DEBUG
+      reset = 1;              // flag para comando reset
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+
+    } else if (atual == '*') {  //cancela
+      lcd.clear();
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+      //break;
+    }
+
+  //** COMANDO MOSTRA STATUS
+  } else if (anterior == '2'|| guardanum == '2'){
+    statuss=0;              // desativa status para sobreescrever
+    guardanum = '2';
+    lcd.setCursor(0,0);
+    lcd.print("ver statuss?     ");
+    lcd.setCursor(0,1);
+    lcd.print("#-si *-no");
+    scanKeypad();
+    atual = tecla;          // escaneia tecla atual para verificar se eh # ou *
+
+    if (atual == '#'){  //confirma comando statuss
+      lcd.clear();              //sobreescreve tudo oq que estava antes no lcd
+      lcd.setCursor(8,0);
+      lcd.print("mostrei"); //teste - transformar em coment
+      statuss=1;            // flag para mostrar estado
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+
+    } else if (atual == '*'){  //cancela
+      lcd.clear();
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+      //break;
+    }
+
+  //** COMANDO INICIA COLETA
+  } else if (anterior == '3'|| guardanum == '3') {
+    statuss=0;              // desativa status para sobreescrever
+    guardanum = '3';
+    lcd.setCursor(0,0);
+    lcd.print("inicia coleta?  ");
+    lcd.setCursor(0,1);
+    lcd.print("#-si *-no");
+    scanKeypad();
+    atual = tecla;            // escaneia tecla atual para verificar se eh # ou *
+
+    if (atual == '#'){              //confirma comando inicia
+      lcd.clear();
+      lcd.print("iniciou");         //DEBUG
+      inicia = 1;                   //flag para iniciar coleta
+      finaliza = 0;
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+
+    } else if (atual == '*') {      //cancela
+      lcd.clear();
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+      //break;
+    }
+
+  //** COMANDO FINALIZA COLETA
+  } else if (anterior == '4'|| guardanum == '4'){
+    statuss=0;                      // desativa status para sobreescrever
+    guardanum = '4';
+    lcd.setCursor(0,0);
+    lcd.print("finaliza coleta?");
+    lcd.setCursor(0,1);
+    lcd.print("#-si *-no");
+    scanKeypad();
+    atual = tecla;              // escaneia tecla atual para verificar se eh # ou *
+
+    if (atual == '#'){              //confirma comando finaliza
+      lcd.clear();
+      lcd.print("finalizou");         //DEBUG
+      finaliza = 1;                   // flag para finalizar coleta
+      inicia = 0;
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+    } else if (atual == '*'){          //cancela
+      lcd.clear();
+      anterior = 0;
+      atual = 0;
+      tecla = 0;
+      guardanum=0;
+    //break;
+      }
+
+    //** COMANDO TRANSFERE DADOS
+    } else if (anterior == '5'|| guardanum == '5'){
+      inicia=0;                     // pausa coleta de dados
+      statuss=0;                    // desativa status para sobreescrever
+      guardanum = '5';
+
+      lcd.setCursor(0,0);
+      lcd.print("transfereir?     ");
+      lcd.setCursor(0,1);
+      lcd.print("#-si *-no");
+      scanKeypad();
+      atual = tecla;          // escaneia tecla atual para verificar se eh # ou *
+
+      if (atual == '#'){  //confirma comando tranferir
+        lcd.clear();
+        lcd.print("num btn 1 e 1022");
+        tecla = 0;
+        coletaNumero();
+        transfere = 1;
+        Serial.println("pegou um numero");  //DEBUG
+        Serial.println(valor);
+        anterior = 0;
+        atual = 0;
+        tecla = 0;
+        guardanum=0;
+      } else if (atual == '*'){  //cancela
+        lcd.clear();
+        anterior = 0;
+        atual = 0;
+        tecla = 0;
+        guardanum=0;
+        //break;
+        }
+      }
+        // else {
+        //   anterior = 0;
+        //   atual = 0;
+        //   tecla = 0;
+        // }
+}
+
+
+
+
+
+
+//escreve numa posição, msb e lsb valores
+void writeMemo(int position, int valor1, int valor2){
+  if (position >= 0 && position < 255){           //escreve na parte 1 da memória
+    Wire.beginTransmission(80);
+    Wire.write(position);
+    Wire.write(valor1); // data
+    //delay(10);
+    Wire.endTransmission(80);
+    delay(10);
+    Wire.beginTransmission(80);
+    Wire.write(position+1);
+    Wire.write(valor2); // data
+    //delay(10);
+    Wire.endTransmission(80);
+    delay(10);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 256 && position < 511){      //escreve na parte 2 da memória
+    Wire.beginTransmission(81);
+    Wire.write(position-256);
+    Wire.write(valor1); // data
+    Wire.endTransmission(81);
+    delay(5);
+    Wire.beginTransmission(81);
+    Wire.write(position+1-256);
+    Wire.write(valor2); // data
+    Wire.endTransmission(81);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 512 && position < 767){      //escreve na parte 3 da memória
+    Wire.beginTransmission(82);
+    Wire.write(position-512);
+    Wire.write(valor1); // data
+    Wire.endTransmission(82);
+    delay(5);
+    Wire.beginTransmission(82);
+    Wire.write(position+1-512);
+    Wire.write(valor2); // data
+    Wire.endTransmission(82);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 768 && position < 1023){     //escreve na parte 4 da memória
+    Wire.beginTransmission(83);
+    Wire.write(position-768);
+    Wire.write(valor1); // data
+    Wire.endTransmission(83);
+    delay(5);
+    Wire.beginTransmission(83);
+    Wire.write(position+1-768);
+    Wire.write(valor2); // data
+    Wire.endTransmission(83);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 1024 && position < 1279){    //escreve na parte 5 da memória
+    Wire.beginTransmission(84);
+    Wire.write(position-1024);
+    Wire.write(valor1); // data
+    Wire.endTransmission(84);
+    delay(5);
+    Wire.beginTransmission(84);
+    Wire.write(position+1-1024);
+    Wire.write(valor2); // data
+    Wire.endTransmission(84);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 1280 && position < 1535){      //escreve na parte 6 da memória
+    Wire.beginTransmission(85);
+    Wire.write(position-1280);
+    Wire.write(valor1); // data
+    Wire.endTransmission(85);
+    delay(5);
+    Wire.beginTransmission(85);
+    Wire.write(position+1-1280);
+    Wire.write(valor2); // data
+    Wire.endTransmission(85);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 1536 && position < 1791){      //escreve na parte 7 da memória
+    Wire.beginTransmission(86);
+    Wire.write(position-1536);
+    Wire.write(valor1); // data
+    Wire.endTransmission(86);
+    delay(5);
+    Wire.beginTransmission(86);
+    Wire.write(position+1-1536);
+    Wire.write(valor2); // data
+    Wire.endTransmission(86);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;
+  } else if (position >= 1792 && position < 2045){       //escreve na parte 8 da memória
+    Wire.beginTransmission(87);
+    Wire.write(position-1792);
+    Wire.write(valor1); // data
+    Wire.endTransmission(87);
+    delay(5);
+    Wire.beginTransmission(87);
+    Wire.write(position+1-1792);
+    Wire.write(valor2); // data
+    Wire.endTransmission(87);
+    delay(5);
+    countMed++;
+    countPosition = countPosition+2;          
+  } else if (position == 2046){                       //escreve na parte de guardar espaços ocupados da memória
+    Wire.beginTransmission(87);
+    Wire.write(position-1792);
+    Wire.write(valor1); // data
+    Wire.endTransmission(87);
+    delay(5);
+    Wire.beginTransmission(87);
+    Wire.write(position+1-1792);
+    Wire.write(valor2); // data
+    Wire.endTransmission(87);
+    delay(5);
+  }
+  //Serial.print("valor1: ");
+  //Serial.println(valor1);
+  //Serial.print("valor2: ");
+  //Serial.println(valor2);
+}
+
+//le de uma posição, uma quantidade n de valores
+void readMemo(int position, int quantidad){
+  int n = quantidad;
+  byte a;
+  byte b;
+  int contaux = position;  //desnecessário
+  while (n > 0){
+    if (position >=0 && position < 255){        //le da parte 1 da memória
+      Wire.beginTransmission(80); // endereco de memoria
+      Wire.write(position-2);
+      Wire.endTransmission(80);
+      Wire.requestFrom(80,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(80); // endereco de memoria
+      Wire.write(position-1);
+      Wire.endTransmission(80);
+      Wire.requestFrom(80,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    } 
+    else if (position >= 256 && position < 511){  //le da parte 2 da memória
+      Wire.beginTransmission(81); // endereco de memoria
+      Wire.write(position-2-256);
+      Wire.endTransmission(81);
+      Wire.requestFrom(81,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(81); // endereco de memoria
+      Wire.write(position-1-256);
+      Wire.endTransmission(81);
+      Wire.requestFrom(81,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }
+    else if (position >= 512 && position < 767){    //le da parte 3 da memória
+      Wire.beginTransmission(82); // endereco de memoria
+      Wire.write(position-2-512);
+      Wire.endTransmission(82);
+      Wire.requestFrom(82,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(82); // endereco de memoria
+      Wire.write(position-1-512);
+      Wire.endTransmission(82);
+      Wire.requestFrom(82,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    } 
+    else if (position >= 768 && position < 1023){     //le da parte 4 da memória
+      Wire.beginTransmission(83); // endereco de memoria
+      Wire.write(position-2-768);
+      Wire.endTransmission(83);
+      Wire.requestFrom(83,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(83); // endereco de memoria
+      Wire.write(position-1-768);
+      Wire.endTransmission(83);
+      Wire.requestFrom(83,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }
+    else if (position >= 1024 && position < 1279){      //le da parte 5 da memória
+      Wire.beginTransmission(84); // endereco de memoria
+      Wire.write(position-2-1024);
+      Wire.endTransmission(84);
+      Wire.requestFrom(84,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(84); // endereco de memoria
+      Wire.write(position-1-1024);
+      Wire.endTransmission(84);
+      Wire.requestFrom(84,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }
+    else if (position >= 1280 && position < 1535){        //le da parte 6 da memória
+      Wire.beginTransmission(85); // endereco de memoria
+      Wire.write(position-2-1280);
+      Wire.endTransmission(85);
+      Wire.requestFrom(85,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(85); // endereco de memoria
+      Wire.write(position-1-1280);
+      Wire.endTransmission(85);
+      Wire.requestFrom(85,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }
+    else if (position >= 1536 && position < 1791){        //le da parte 7 da memória
+      Wire.beginTransmission(86); // endereco de memoria
+      Wire.write(position-2-1536);
+      Wire.endTransmission(86);
+      Wire.requestFrom(86,1);
+      a = Wire.read();
+      //delay(5);
+      Wire.beginTransmission(86); // endereco de memoria
+      Wire.write(position-1-1536);
+      Wire.endTransmission(86);
+      Wire.requestFrom(86,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }
+    else if (position >= 1792 && position < 2047){        //le da parte 8 da memória
+      Wire.beginTransmission(87); // endereco de memoria
+      Wire.write(position-2-1792);
+      Wire.endTransmission(87);
+      Wire.requestFrom(87,1);
+      a = Wire.read();
+     // delay(5);
+      Wire.beginTransmission(87); // endereco de memoria
+      Wire.write(position-1-1792);
+      Wire.endTransmission(87);
+      Wire.requestFrom(87,1);
+      b = Wire.read();
+      //delay(5);
+      position = position - 2;
+      n--;
+    }else {
+      n--;
+    }
+    //Serial.println(n);
+    //Serial.println(a);
+    //Serial.println(b);
+    valorTotal = recoverValue(a,b)/10;
+    //Serial.print("lido: ");
+    Serial.println(valorTotal);
+  }
+
+}
+
+void crackValue(int valor){
+  //Serial.println(valor);
+  msb = valor/256;
+  //Serial.println(msb);
+  lsb = valor%256;
+  //Serial.println(lsb);
+}
+
+float recoverValue(int valor1, int valor2){
+  float total;
+  total = valor1*256+valor2;
+  return total;
+
+}
+
+void setup(){
+//init serial e displays 7 seg
+Serial.begin(9600);       // taxa de transmissao serial
+Wire.begin();
+Wire.setClock(400000);    // standard value is 100000
+Wire.beginTransmission(63);
+Wire.write(240);          //Desliga displays (b11110000)
+Wire.endTransmission(63);
+
+analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
+
+init_lcd();           // inicia lcd
+
+cli();                // Desabilita interrupções globais
+configuracao_Timer0();
+sei();                // Habilita interrupcoes globais
+
+//teclado matricial
+pinMode(3, INPUT);  //coluna 1
+pinMode(2, INPUT);  //coluna 2
+pinMode(15, INPUT); //coluna 3
+pinMode(11, OUTPUT);  //linha 1
+pinMode(10, OUTPUT);  //linha 2
+pinMode(9, OUTPUT); //linha 3
+pinMode(8, OUTPUT); //linha 4
+digitalWrite (11,HIGH);
+digitalWrite (10,HIGH);
+digitalWrite (9,HIGH);
+digitalWrite (8,HIGH);
+
+}
+
+
+void loop(){
+
+  scanCommand();
+  executeCommand();
+
+  if (inicia == 1){    //display temperatura a cada 2s
+    x=getTmedido()*100;
+    uni = x % 10;
+    y = x / 10;
+    dez = y % 10;
+    z = y / 10;
+    cent = z % 10;
+    w = z / 10;
+    mil = w % 10;
+    displayMode(uni,dez,cent,mil);
+  }
+  
+}
