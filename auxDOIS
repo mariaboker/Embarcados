@@ -83,7 +83,7 @@ int countaux = 0;
 double temperatur = 0;
 byte msb = 0;
 byte lsb = 0;
-double valorTotal=0;
+float valorTotal=0;
 
 
 // Configuracao Temporizador 0 (8 bits) para gerar interrupcoes periodicas a cada 2ms no modo Clear Timer on Compare Match (CTC)
@@ -106,7 +106,7 @@ ISR(TIMER0_COMPA_vect) {
   //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
   if (inicia == 1) {
     timeBase++;
-    if (timeBase > 100) {  // base de tempo de 2s
+    if (timeBase > 500) {  // base de tempo de 2s
     timeBase = 0;
     salvaTemp = 1;          // flag para salvar temperatura na memoria
    }
@@ -296,8 +296,8 @@ double getTmedido() {               //get temp sensor
   float temp;
   float ldr;
   ldr = analogRead(0);
-  //temp = ldr*(1.1/1023*100);        //medindo errado tinker e certo arduino
-  temp=((((ldr/1024)*1.1)-0.5)*100);  //medindo certo tinker e errado arduino
+  temp = ldr*(1.1/1023*100);        //medindo errado tinker e certo arduino
+  //temp=((((ldr/1024)*1.1)-0.5)*100);  //medindo certo tinker e errado arduino
   lcd.setCursor(11,2);
   lcd.print(temp);
 
@@ -529,56 +529,7 @@ void scanCommand() {
 
 
 
-void setup(){
-//init serial e displays 7 seg
-Serial.begin(9600);       // taxa de transmissao serial
-Wire.begin();
-Wire.setClock(400000);    // standard value is 100000
-Wire.beginTransmission(63);
-Wire.write(240);          //Desliga displays (b11110000)
-Wire.endTransmission(63);
 
-analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
-
-init_lcd();           // inicia lcd
-
-cli();                // Desabilita interrupções globais
-configuracao_Timer0();
-sei();                // Habilita interrupcoes globais
-
-//teclado matricial
-pinMode(3, INPUT);  //coluna 1
-pinMode(2, INPUT);  //coluna 2
-pinMode(15, INPUT); //coluna 3
-pinMode(11, OUTPUT);  //linha 1
-pinMode(10, OUTPUT);  //linha 2
-pinMode(9, OUTPUT); //linha 3
-pinMode(8, OUTPUT); //linha 4
-digitalWrite (11,HIGH);
-digitalWrite (10,HIGH);
-digitalWrite (9,HIGH);
-digitalWrite (8,HIGH);
-
-}
-
-
-void loop(){
-
-  scanCommand();
-  executeCommand();
-
-  if (inicia == 1){    //display temperatura a cada 2s
-    x=getTmedido()*100;
-    uni = x % 10;
-    y = x / 10;
-    dez = y % 10;
-    z = y / 10;
-    cent = z % 10;
-    w = z / 10;
-    mil = w % 10;
-  }
-  displayMode(uni,dez,cent,mil);
-}
 
 
 //escreve numa posição, msb e lsb valores
@@ -589,13 +540,13 @@ void writeMemo(int position, int valor1, int valor2){
     Wire.write(valor1); // data
     //delay(10);
     Wire.endTransmission(80);
-    delay(5);
+    delay(10);
     Wire.beginTransmission(80);
     Wire.write(position+1);
     Wire.write(valor2); // data
     //delay(10);
     Wire.endTransmission(80);
-    delay(5);
+    delay(10);
     countMed++;
     countPosition = countPosition+2;
   } else if (position >= 256 && position < 511){      //escreve na parte 2 da memória
@@ -720,13 +671,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(80);
       Wire.requestFrom(80,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(80); // endereco de memoria
       Wire.write(position-1);
       Wire.endTransmission(80);
       Wire.requestFrom(80,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     } 
@@ -736,13 +687,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(81);
       Wire.requestFrom(81,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(81); // endereco de memoria
       Wire.write(position-1-256);
       Wire.endTransmission(81);
       Wire.requestFrom(81,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     }
@@ -752,13 +703,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(82);
       Wire.requestFrom(82,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(82); // endereco de memoria
       Wire.write(position-1-512);
       Wire.endTransmission(82);
       Wire.requestFrom(82,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     } 
@@ -768,13 +719,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(83);
       Wire.requestFrom(83,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(83); // endereco de memoria
       Wire.write(position-1-768);
       Wire.endTransmission(83);
       Wire.requestFrom(83,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     }
@@ -784,13 +735,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(84);
       Wire.requestFrom(84,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(84); // endereco de memoria
       Wire.write(position-1-1024);
       Wire.endTransmission(84);
       Wire.requestFrom(84,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     }
@@ -800,13 +751,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(85);
       Wire.requestFrom(85,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(85); // endereco de memoria
       Wire.write(position-1-1280);
       Wire.endTransmission(85);
       Wire.requestFrom(85,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     }
@@ -816,13 +767,13 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(86);
       Wire.requestFrom(86,1);
       a = Wire.read();
-      delay(5);
+      //delay(5);
       Wire.beginTransmission(86); // endereco de memoria
       Wire.write(position-1-1536);
       Wire.endTransmission(86);
       Wire.requestFrom(86,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
       n--;
     }
@@ -832,21 +783,23 @@ void readMemo(int position, int quantidad){
       Wire.endTransmission(87);
       Wire.requestFrom(87,1);
       a = Wire.read();
-      delay(5);
+     // delay(5);
       Wire.beginTransmission(87); // endereco de memoria
       Wire.write(position-1-1792);
       Wire.endTransmission(87);
       Wire.requestFrom(87,1);
       b = Wire.read();
-      delay(5);
+      //delay(5);
       position = position - 2;
+      n--;
+    }else {
       n--;
     }
     //Serial.println(n);
     //Serial.println(a);
     //Serial.println(b);
-    valorTotal = recoverValue(a,b);
-    Serial.print("lido: ");
+    valorTotal = recoverValue(a,b)/10;
+    //Serial.print("lido: ");
     Serial.println(valorTotal);
   }
 
@@ -860,9 +813,61 @@ void crackValue(int valor){
   //Serial.println(lsb);
 }
 
-double recoverValue(int valor1, int valor2){
-  double total;
+float recoverValue(int valor1, int valor2){
+  float total;
   total = valor1*256+valor2;
   return total;
 
+}
+
+void setup(){
+//init serial e displays 7 seg
+Serial.begin(9600);       // taxa de transmissao serial
+Wire.begin();
+Wire.setClock(400000);    // standard value is 100000
+Wire.beginTransmission(63);
+Wire.write(240);          //Desliga displays (b11110000)
+Wire.endTransmission(63);
+
+analogReference(INTERNAL);  //referencia de 1,1V para o sensor de temperatura
+
+init_lcd();           // inicia lcd
+
+cli();                // Desabilita interrupções globais
+configuracao_Timer0();
+sei();                // Habilita interrupcoes globais
+
+//teclado matricial
+pinMode(3, INPUT);  //coluna 1
+pinMode(2, INPUT);  //coluna 2
+pinMode(15, INPUT); //coluna 3
+pinMode(11, OUTPUT);  //linha 1
+pinMode(10, OUTPUT);  //linha 2
+pinMode(9, OUTPUT); //linha 3
+pinMode(8, OUTPUT); //linha 4
+digitalWrite (11,HIGH);
+digitalWrite (10,HIGH);
+digitalWrite (9,HIGH);
+digitalWrite (8,HIGH);
+
+}
+
+
+void loop(){
+
+  scanCommand();
+  executeCommand();
+
+  if (inicia == 1){    //display temperatura a cada 2s
+    x=getTmedido()*100;
+    uni = x % 10;
+    y = x / 10;
+    dez = y % 10;
+    z = y / 10;
+    cent = z % 10;
+    w = z / 10;
+    mil = w % 10;
+    displayMode(uni,dez,cent,mil);
+  }
+  
 }
