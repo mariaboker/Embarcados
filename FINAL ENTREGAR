@@ -106,7 +106,7 @@ ISR(TIMER0_COMPA_vect) {
   //se a funcao inicializar esta acionada conta tempo de 2s para cada coleta e seta salvaTemp para escrever na memoria
   if (inicia == 1) {
     timeBase++;
-    if (timeBase > 500) {  // base de tempo de 2s
+    if (timeBase > 100) {  // base de tempo de 2s
     timeBase = 0;
     salvaTemp = 1;          // flag para salvar temperatura na memoria
    }
@@ -350,6 +350,7 @@ void executeCommand() {
       lcd.print(countMed);    // display numero de espacos ocupados
       lcd.setCursor(0,1);
       lcd.print(freeSpace);   // display numero de espacos vazios
+      lcd.print("    ");
     }
 
     // se comando foi transfere, transfere dados para monitor serial
@@ -800,7 +801,8 @@ void readMemo(int position, int quantidad){
     //Serial.println(b);
     valorTotal = recoverValue(a,b)/10;
     //Serial.print("lido: ");
-    Serial.println(valorTotal);
+    Serial.print(valorTotal);
+    Serial.println(" ");
   }
 
 }
